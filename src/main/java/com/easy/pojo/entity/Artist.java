@@ -12,6 +12,7 @@ import lombok.experimental.Accessors;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * <p>
@@ -72,5 +73,14 @@ public class Artist implements Serializable {
      */
     @TableField("introduction")
     private String introduction;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @TableField("create_time")
+    private LocalDateTime createTime;
+
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @TableField("update_time")
+    private LocalDateTime updateTime;
 
 }

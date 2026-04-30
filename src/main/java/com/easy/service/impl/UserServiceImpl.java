@@ -8,8 +8,6 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.easy.constant.JwtClaimsConstant;
-import com.easy.constant.MessageConstant;
 import com.easy.mapper.UserMapper;
 import com.easy.pojo.dto.UserAddDTO;
 import com.easy.pojo.dto.UserDTO;
@@ -18,6 +16,7 @@ import com.easy.pojo.entity.User;
 import com.easy.pojo.vo.UserAdminVO;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
+import com.easy.service.MinIOService;
 import com.easy.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,8 +26,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -37,6 +39,8 @@ import java.util.Map;
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
     private final UserMapper userMapper;
+
+    private final MinIOService minIOService;
 
 
     @Override
@@ -151,25 +155,56 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     public Result deleteUser(Long userId) {
-        if(userId== null){
-            return Result.error("用户ID不能为空");
-        }
+        if(userId== null) return Result.error("用户ID不能为空");
+
         User user = userMapper.selectById(userId);
-        if (user == null){
-            return Result.error("用户不存在");
+        if (user == null) return Result.error("用户不存在");
+
+        // 删除用户头像
+        String avatar = user.getUserAvatar();
+        if (StrUtil.isNotBlank(avatar)) {
+            minIOService.deleteFile(avatar);
         }
-        int result = userMapper.deleteById(userId);
-        if (result == 0){
-            return Result.error("用户删除失败");
-        }
-        return Result.success("用户删除成功");
+
+        return Result.success(userMapper.deleteById(userId) == 1 ? "用户删除成功" : "用户删除失败");
     }
 
-    @Override
+    @Transactional
     public Result deleteUsers(List<Long> userIds) {
-        if (userMapper.deleteByIds(userIds) == 0) {
+        // 批量查询用户
+        List<User> userList = userMapper.selectByIds(userIds);
+        // 使用Set获取查询结果的id集合
+        Set<Long> userIdSet = userList.stream().map(User::getUserId).collect(Collectors.toSet());
+
+        List<Long> notExistUserIds = new ArrayList<>();
+
+        for (Long userId : userIds) {
+            if (!userIdSet.contains(userId)) {
+                notExistUserIds.add(userId);
+            }
+        }
+
+        if (userMapper.deleteByIds(userIdSet) == 0) {
             return Result.error("用户批量删除失败");
         }
+
+        // 删除用户头像
+        for (User user : userList) {
+            try {
+                if (StrUtil.isNotBlank(user.getUserAvatar())) {
+                    minIOService.deleteFile(user.getUserAvatar());
+                }
+            } catch (Exception e) {
+                log.error("头像删除失败，路径: {}，用户ID: {}，需手动清理",
+                        user.getUserAvatar(), user.getUserId(), e);
+            }
+        }
+
+
+        if (!notExistUserIds.isEmpty()){
+            return Result.success("用户批量删除成功，以下用户不存在：" + notExistUserIds);
+        }
+
         return Result.success("用户批量删除成功");
     }
 
