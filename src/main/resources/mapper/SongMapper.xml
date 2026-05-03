@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.easy.mapper.SongMapper">
+    <select id="getAllSongs" resultType="com.easy.pojo.vo.SongAdminVO">
+        SELECT
+        s.id AS songId,
+        s.name AS songName,
+        s.album AS album,
+        s.lyric AS lyric,
+        s.duration AS duration,
+        s.style AS style,
+        s.cover_url AS coverUrl,
+        s.audio_url AS audioUrl,
+        s.release_time AS releaseTime,
+        a.name AS artistName
+        FROM tb_song s
+        LEFT JOIN tb_artist a ON s.artist_id = a.id
+        <where>
+            <if test="artistId != null">
+                and s.artist_id=#{artistId}
+            </if>
+            <if test="songName != null and songName !=''">
+                and s.song_name like concat('%',#{songName},'%')
+            </if>
+            <if test="album != null  and album !=''">
+                and s.album like concat('%',#{album},'%')
+            </if>
+        </where>
+        ORDER BY s.release_time DESC
+    </select>
+</mapper>

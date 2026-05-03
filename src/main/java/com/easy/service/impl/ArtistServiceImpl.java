@@ -3,15 +3,18 @@ package com.easy.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.easy.constant.MessageConstant;
 import com.easy.mapper.ArtistMapper;
 import com.easy.pojo.dto.ArtistAddDTO;
 import com.easy.pojo.dto.ArtistPageQueryDTO;
 import com.easy.pojo.dto.ArtistUpdateDTO;
 import com.easy.pojo.entity.Artist;
+import com.easy.pojo.vo.ArtistNameVO;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
 import com.easy.service.ArtistService;
@@ -146,6 +149,24 @@ public class ArtistServiceImpl extends ServiceImpl<ArtistMapper, Artist> impleme
                 .eq(gender != null, Artist::getGender, gender)
                 .eq(StrUtil.isNotBlank(area), Artist::getArea, area);
         return Result.success(baseMapper.selectCount(queryWrapper));
+    }
+
+    @Override
+    public Result<List<ArtistNameVO>> getAllArtistNames() {
+        List<Artist> artists = baseMapper.selectList(new QueryWrapper<Artist>().orderByDesc("id"));
+        if (artists.isEmpty()) {
+            return Result.success("未找到相关数据", null);
+        }
+
+        List<ArtistNameVO> artistNameVOList = artists.stream()
+                .map(artist -> {
+                    ArtistNameVO artistNameVO = new ArtistNameVO();
+                    artistNameVO.setArtistId(artist.getArtistId());
+                    artistNameVO.setArtistName(artist.getArtistName());
+                    return artistNameVO;
+                }).toList();
+
+        return Result.success(artistNameVOList);
     }
 
 

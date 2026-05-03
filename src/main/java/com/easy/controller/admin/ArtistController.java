@@ -5,6 +5,7 @@ import com.easy.pojo.dto.ArtistAddDTO;
 import com.easy.pojo.dto.ArtistPageQueryDTO;
 import com.easy.pojo.dto.ArtistUpdateDTO;
 import com.easy.pojo.entity.Artist;
+import com.easy.pojo.vo.ArtistNameVO;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
 import com.easy.service.ArtistService;
@@ -64,6 +65,12 @@ public class ArtistController {
     @GetMapping("/getAllArtistsCount")
     public Result<Long> getAllArtistsCount(@RequestParam(required = false) Integer gender, @RequestParam(required = false) String area) {
         return artistService.getAllArtistsCount(gender, area);
+    }
+
+    @Operation(summary = "获取所有歌手id和名称接口")
+    @GetMapping("/getAllArtistNames")
+    public Result<List<ArtistNameVO>> getAllArtistNames() {
+        return artistService.getAllArtistNames();
     }
 
 
