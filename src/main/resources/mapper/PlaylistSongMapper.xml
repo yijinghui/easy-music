@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.easy.mapper.PlaylistSongMapper">
+
+    <insert id="insertBatch">
+        insert into tb_playlist_song (song_id, playlist_id) values
+        <foreach collection="songList" item="song" separator=",">
+            (#{song.songId},#{song.playlistId})
+        </foreach>
+    </insert>
+    <select id="selectPageWithSongInfo" resultType="com.easy.pojo.vo.PlaylistSongVO">
+        select
+            ps.playlist_id as playlistId,
+            s.id as songId,
+            s.name as songName,
+            a.name as artistName,
+            s.album as album,
+            s.duration as duration,
+            s.style as style,
+            s.cover_url as coverUrl,
+            s.audio_url as audioUrl
+        from tb_playlist_song ps
+        left join tb_song s on ps.song_id = s.id
+        left join tb_artist a on s.artist_id = a.id
+        where ps.playlist_id = #{playlistId}
+    </select>
+</mapper>

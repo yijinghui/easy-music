@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.easy.mapper.PlaylistMapper">
+
+    <select id="selectPageWithPlaylistInfo" resultType="com.easy.pojo.vo.PlaylistVO">
+        select
+            p.id as playlistId,
+            p.title as title,
+            p.style as style,
+            p.play_count as playCount,
+            p.create_time as createTime,
+            p.update_time as updateTime,
+            u.username as username,
+            <!-- 子查询获取点赞数 -->
+            (select count(*) from tb_playlist_like pl where pl.playlist_id = p.id) as likeCount,
+            <!-- 子查询获取评论数 -->
+            (select count(*) from tb_playlist_comment pc where pc.playlist_id = p.id) as commentCount
+        from tb_playlist p
+        left join tb_user u on p.user_id = u.id
+        <where>
+        <if test="dto.title != null and dto.title !=''">
+            and p.title like concat('%',#{dto.title},'%')
+        </if>
+        <if test="dto.style != null and dto.style !=''">
+            and p.style like concat('%',#{dto.style},'%')
+        </if>
+        <if test="dto.userId != null">
+            and p.user_id = #{dto.userId}
+        </if>
+        </where>
+        <if test="dto.orderBy != null and dto.orderBy!=''">
+            order by ${dto.orderBy} ${dto.sortRule}
+        </if>
+    </select>
+
+
+
+</mapper>

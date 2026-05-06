@@ -1,5 +1,6 @@
 package com.easy.pojo.entity;
 
+
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -13,59 +14,57 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-/**
- * <p>
- *
- * </p>
- *
- * @author sunpingli
- * @since 2025-01-09
- */
 @Data
 @EqualsAndHashCode(callSuper = false)
 @Accessors(chain = true)
-@TableName("tb_playlist")
-public class Playlist implements Serializable {
+@TableName("tb_playlist_comment")
+public class PlaylistComment implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
     /**
-     * 歌单 id
+     * 评论 id
      */
     @TableId(value = "id", type = IdType.AUTO)
+    private Long id;
+
+    /**
+     * 歌单 id
+     */
+    @TableField(value = "playlist_id")
     private Long playlistId;
 
     /**
-     * 歌单标题
-     */
-    @TableField("title")
-    private String title;
-
-    /**
-     * 歌单封面
-     */
-    @TableField("cover_url")
-    private String coverUrl;
-
-    /**
-     * 歌单简介
-     */
-    @TableField("introduction")
-    private String introduction;
-
-    /**
-     * 歌单风格
-     */
-    @TableField("style")
-    private String style;
-
-
-    /**
-     * 所属用户id
+     * 用户 id
      */
     @TableField("user_id")
     private Long userId;
+
+    /**
+     * 评论内容
+     */
+    @TableField("content")
+    private String content;
+
+    /**
+     * 点赞数
+     */
+    @TableField("like_count")
+    private Long likeCount;
+
+    /**
+     * 父评论 id
+     */
+    @TableField("parent_id")
+    private Long parentId;
+
+    /**
+     * 评论状态
+     */
+    @TableField("status")
+    private Integer status;
+
 
     /**
      * 创建时间
@@ -81,12 +80,5 @@ public class Playlist implements Serializable {
     @TableField("update_time")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime;
-
-
-    /**
-     * 播放次数
-     */
-    @TableField("play_count")
-    private Long playCount;
 
 }
