@@ -17,7 +17,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
-@RestController
 @RequestMapping("/admin")
 @Tag(name = "歌手管理接口")
 @RequiredArgsConstructor
@@ -72,6 +71,7 @@ public class ArtistController {
     public Result<List<ArtistNameVO>> getAllArtistNames() {
         return artistService.getAllArtistNames();
     }
+
 
 
 }

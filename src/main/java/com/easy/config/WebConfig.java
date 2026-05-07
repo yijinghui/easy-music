@@ -1,6 +1,8 @@
 package com.easy.config;
 
 
+import com.easy.interceptor.LoginInterceptor;
+import com.easy.interceptor.RefreshTokenInterceptor;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
@@ -9,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -18,8 +21,6 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
-    @Resource
-    private RolePermissionManager rolePermissionManager;
 
     /**
      * OpenAPI 3 配置
@@ -55,25 +56,22 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
 
-    /*@Override
+    @Override
     public void addInterceptors(InterceptorRegistry registry) {
 
-        registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate, rolePermissionManager))
+        registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate))
                 .addPathPatterns("/**").order(0);
 
         // 登录接口和注册接口不拦截
-        registry.addInterceptor(new LoginInterceptor())
+        registry.addInterceptor(new LoginInterceptor(stringRedisTemplate))
                 .addPathPatterns("/admin/**","/banner/**","/user/**","/playlist/**","/artist/**","/song/**","/comment/**","/feedback/**","/favorite/**") // 拦截所有请求
                 .excludePathPatterns(
-
+                        // 不拦截的请求路径（未登录也可访问）
                         "/admin/login", "/admin/logout", "/admin/register",
-                        "/user/login", "/user/logout", "/user/register",
-                        "/user/sendVerificationCode", "/user/resetUserPassword",
-                        "/banner/getBannerList",
-                        "/playlist/getAllPlaylists", "/playlist/getRecommendedPlaylists", "/playlist/getPlaylistDetail/**",
-                        "/artist/getAllArtists", "/artist/getArtistDetail/**",
-                        "/song/getAllSongs", "/song/getRecommendedSongs", "/song/getSongDetail/**")
+                        "/user/login/email","/user/login/password", "/user/register",
+                        "/user/sendVerificationCode/*","/user/resetUserPassword"
+                )
                 .order(1);
 
-    }*/
+    }
 }

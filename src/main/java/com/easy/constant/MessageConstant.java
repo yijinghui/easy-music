@@ -58,4 +58,5 @@ public class MessageConstant {
     public static final String FILE_UPLOAD = "文件上传";
     public static final String NOT_PERMISSION = "无权限";
     public static final String CAPTCHA = "验证码";
+    public static final String NOT_BLANK = "不能为空";
 }

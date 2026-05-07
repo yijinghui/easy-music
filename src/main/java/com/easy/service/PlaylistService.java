@@ -13,7 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @Service
-public interface PlaylistService {
+public interface PlaylistService{
     Result<Long> getAllPlaylistsCount(String style);
 
     Result<PageResult<PlaylistVO>> getAllPlaylists(PlaylistPageQueryDTO pageQueryDTO);

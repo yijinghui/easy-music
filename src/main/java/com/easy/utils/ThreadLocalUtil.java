@@ -1,5 +1,10 @@
 package com.easy.utils;
 
+import com.easy.constant.JwtClaimsConstant;
+import com.easy.result.Result;
+
+import java.util.Map;
+
 /**
  * ThreadLocal 工具类
  */
@@ -22,5 +27,18 @@ public class ThreadLocalUtil {
     // 清除ThreadLocal 防止内存泄漏
     public static void remove() {
         THREAD_LOCAL.remove();
+    }
+
+    // 获取用户 ID
+    public static Long getUserId() {
+        Map<String, Object> map = (Map<String, Object>) THREAD_LOCAL.get();
+
+        if (map == null || map.isEmpty()) return -1L;
+
+        Object userIdObj = map.get(JwtClaimsConstant.USER_ID);
+
+        if (userIdObj == null) return -1L;
+
+        return Long.parseLong(userIdObj.toString());
     }
 }

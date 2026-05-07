@@ -55,4 +55,8 @@ public class Result<T> {
         return new Result(1, message, null);
     }
 
+    public static <T> Result<T> error(String message,T data) {
+        return new Result(1, message, data);
+    }
+
 }
