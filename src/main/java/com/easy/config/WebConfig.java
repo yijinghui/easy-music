@@ -64,10 +64,11 @@ public class WebConfig implements WebMvcConfigurer {
 
         // 登录接口和注册接口不拦截
         registry.addInterceptor(new LoginInterceptor(stringRedisTemplate))
-                .addPathPatterns("/admin/**","/banner/**","/user/**","/playlist/**","/artist/**","/song/**","/comment/**","/feedback/**","/favorite/**") // 拦截所有请求
+                .addPathPatterns("/admin/**","/user/**","/playlist/**","/artist/**","/song/**","/comment/**","/feedback/**","/favorite/**") // 拦截所有请求
                 .excludePathPatterns(
                         // 不拦截的请求路径（未登录也可访问）
                         "/admin/login", "/admin/logout", "/admin/register",
+                        "/user/banner/*",
                         "/user/login/email","/user/login/password", "/user/register",
                         "/user/sendVerificationCode/*","/user/resetUserPassword"
                 )
