@@ -9,8 +9,11 @@ import com.easy.result.Result;
 import com.easy.service.SignInService;
 import com.easy.utils.ThreadLocalUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.connection.BitFieldSubCommands;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -27,24 +30,30 @@ public class SignInServiceImpl extends ServiceImpl<SignInMapper, SignIn> impleme
 
     @Override
     public Result signIn() {
-
         Long userId = ThreadLocalUtil.getUserId();
-
         LocalDateTime now = LocalDateTime.now();
-        String key="sign:user:"+userId+now.format(DateTimeFormatter.ofPattern(":yyyyMM"));
-
-        // 获取当前月的当前天数
+        String key = "sign:user:" + userId + now.format(DateTimeFormatter.ofPattern(":yyyyMM"));
         int day = now.getDayOfMonth();
 
-        stringRedisTemplate.opsForValue().setBit(key,day-1,true);
+        // 1. 先检查今天是否已签到
+        Boolean hasSigned = stringRedisTemplate.opsForValue().getBit(key, day - 1);
+        if (Boolean.TRUE.equals(hasSigned)) {
+            return Result.error("今日已签到");
+        }
 
-        // 插入签到记录到数据库
-        SignIn signIn = new SignIn();
-        signIn.setUserId(userId);
-        signIn.setSignTime(now);
-        signIn.setSignDay(now.toLocalDate());
+        stringRedisTemplate.opsForValue().setBit(key, day - 1, true);
 
-        baseMapper.insert(signIn);
+        try {
+            SignIn signIn = new SignIn();
+            signIn.setUserId(userId);
+            signIn.setSignTime(now);
+            signIn.setSignDay(now.toLocalDate());
+            baseMapper.insert(signIn);
+        } catch (Exception e) {
+            // 回滚Redis的bit（删除或置为false）
+            stringRedisTemplate.opsForValue().setBit(key, day - 1, false);
+            return Result.error("签到失败，请稍后重试");
+        }
 
         return Result.success("签到成功");
     }
@@ -106,46 +115,43 @@ public class SignInServiceImpl extends ServiceImpl<SignInMapper, SignIn> impleme
     @Override
     public Result<SignInVO> getInfo() {
         Long userId = ThreadLocalUtil.getUserId();
-
         LocalDate now = LocalDate.now();
+        String key = "sign:user:" + userId + now.format(DateTimeFormatter.ofPattern(":yyyyMM"));
+        String repairKey = "signRepair:user:" + userId + now.format(DateTimeFormatter.ofPattern(":yyyyMM"));
 
+        int days = now.lengthOfMonth();
 
-        String key="sign:user:"+userId+now.format(DateTimeFormatter.ofPattern(":yyyyMM"));
-        String repairKey="signRepair:user:"+userId+now.format(DateTimeFormatter.ofPattern(":yyyyMM"));
+        // 1. 一次 Redis 请求获取所有签到位（Lua脚本或BITFIELD）
+        // BITFIELD key GET u31 0  → 获取31位无符号整数
+        List<Long> result = stringRedisTemplate.opsForValue().bitField(key,
+                BitFieldSubCommands.create()
+                        .get(BitFieldSubCommands.BitFieldType.unsigned(days))
+                        .valueAt(0)
+        );
+
+        long bitField = (result != null && !result.isEmpty()) ? result.get(0) : 0L;
+
+        // 2. 解析位图到 List<Boolean>
+        List<Boolean> signInTable = new ArrayList<>(days);
+        int totalSignInCount = 0;
+        for (int i = 0; i < days; i++) {
+            boolean signed = ((bitField >> i) & 1) == 1;
+            signInTable.add(signed);
+            if (signed) totalSignInCount++;
+        }
+
+        // 3. 获取补签次数
+        String repairCount = stringRedisTemplate.opsForValue().get(repairKey);
+        if (repairCount == null) {
+            repairCount = Boolean.TRUE.equals(stringRedisTemplate.opsForValue().setIfAbsent(repairKey, "5")) ? "5" : stringRedisTemplate.opsForValue().get(repairKey);
+        }
+        repairCount = repairCount == null ? "0" : repairCount;
 
         SignInVO signInVO = new SignInVO();
-
-        Integer totalSignInCount = 0;
-
-        // 获取签到表
-        // 1.获取当前月的天数
-        int days = now.lengthOfMonth();
-        // 2.创建List集合
-        List<Boolean> signInTable = new ArrayList<>();
-        // 3.获取数据
-        for (int i = 0; i < days; i++) {
-            Boolean bit = stringRedisTemplate.opsForValue().getBit(key, i);
-            if (Boolean.FALSE.equals(bit)){
-                signInTable.add(false);
-            }else {
-                signInTable.add(true);
-                totalSignInCount++;
-            }
-        }
-
-
         signInVO.setSignInTable(signInTable);
         signInVO.setSignInCount(totalSignInCount);
-
-        // 获取剩余补签次数
-        String repairCount = stringRedisTemplate.opsForValue().get(repairKey);
-        if (repairCount==null){
-            repairCount="5";
-            stringRedisTemplate.opsForValue().set(repairKey,repairCount);
-        }
         signInVO.setSignInRepairCount(Integer.parseInt(repairCount));
 
         return Result.success(signInVO);
-
     }
 }

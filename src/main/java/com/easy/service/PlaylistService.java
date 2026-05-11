@@ -3,6 +3,7 @@ package com.easy.service;
 
 import com.easy.pojo.dto.*;
 import com.easy.pojo.entity.Playlist;
+import com.easy.pojo.vo.PlaylistInfoVO;
 import com.easy.pojo.vo.PlaylistSongVO;
 import com.easy.pojo.vo.PlaylistVO;
 import com.easy.result.PageResult;
@@ -30,4 +31,6 @@ public interface PlaylistService{
     Result addPlaylistSongs(PlaylistSongAddDTO addDTO);
 
     Result<PageResult<PlaylistSongVO>> getPlaylistSongs(PlaylistSongPageQueryDTO pageQueryDTO);
+
+    List<PlaylistInfoVO> getPlaylistInfo(Long userId);
 }

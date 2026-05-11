@@ -1,0 +1,44 @@
+@startuml
+title 用户上传歌曲时序图 - 简化版
+
+actor 用户 as User
+participant "SongController" as Ctrl
+participant "SongService" as Svc
+participant "MinioService" as Minio
+database "MySQL" as DB
+
+User -> Ctrl: 上传歌曲文件
+activate Ctrl
+
+Ctrl -> Svc: uploadSong(file, dto)
+activate Svc
+
+
+alt 未登录
+    Svc --> User: 请先登录
+else 已登录
+    Svc -> DB: 检查是否为歌手
+
+    alt 不是歌手
+        Svc --> User: 权限不足
+    else 是歌手
+        Svc -> Minio: 上传文件
+
+        alt 上传失败
+            Svc --> User: 文件上传失败
+        else 上传成功
+            Svc -> DB: 保存歌曲信息
+
+            alt 保存失败
+                Svc --> User: 保存失败
+            else 保存成功
+                Svc --> User: 上传成功
+            end
+        end
+    end
+end
+
+deactivate Svc
+deactivate Ctrl
+
+@enduml

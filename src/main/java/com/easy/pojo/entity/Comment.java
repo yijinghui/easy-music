@@ -82,7 +82,7 @@ public class Comment implements Serializable {
     /**
      * 是否点赞
      */
-    @TableField(exist = false)
-    private Boolean isLike;
+    @TableField("parent_id")
+    private Long parentId;
 
 }

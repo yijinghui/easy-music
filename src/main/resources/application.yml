@@ -73,13 +73,9 @@ role-path-permissions:
       - "/admin/"
     ROLE_USER:
       - "/user/"
-      - "/playlist/"
+    ROLE_ARTIST:
       - "/artist/"
-      - "/song/"
-      - "/favorite/"
-      - "/comment/"
-      - "/banner/"
-      - "/feedback/"
+      - "/user/"
 
 minio:
   endpoint: http://localhost:9000 # 修改你的 MinIO 端点

@@ -1,0 +1,34 @@
+@startuml
+title 更新轮播图活动图
+
+start
+
+:管理员提交更新请求(bannerId, banner文件);
+
+:删除Redis中的bannerCache缓存;
+
+:上传新轮播图文件到Minio;
+if (上传成功?) then (是)
+    :查询旧轮播图信息;
+else (否)
+    :返回"上传失败";
+    stop
+endif
+
+
+if (旧轮播图URL是否存在?) then (是)
+    :删除Minio中的旧轮播图文件;
+else (否)
+endif
+
+:更新数据库中的bannerUrl;
+
+if (更新是否成功?) then (是)
+    :返回"更新成功";
+else (否)
+    :返回"更新失败";
+endif
+
+stop
+
+@enduml

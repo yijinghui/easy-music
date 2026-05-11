@@ -32,7 +32,17 @@
             order by ${dto.orderBy} ${dto.sortRule}
         </if>
     </select>
-
+    <select id="selectPlaylistInfo" resultType="com.easy.pojo.vo.PlaylistInfoVO">
+        select
+            p.id as id,
+            p.title as title,
+            p.cover_url as coverUrl,
+            p.play_count as playCount,
+            (select count(*) from tb_playlist_song pl where pl.playlist_id = p.id) as songCount
+        from tb_playlist p
+        where p.user_id = #{userId}
+        order by p.play_count desc
+    </select>
 
 
 </mapper>

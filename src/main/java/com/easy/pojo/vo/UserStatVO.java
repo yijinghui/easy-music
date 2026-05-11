@@ -1,46 +1,16 @@
 package com.easy.pojo.vo;
 
+
 import lombok.Data;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.List;
 
 @Data
-public class UserVO implements Serializable {
+public class UserStatVO implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
-
-    /**
-     * 用户 id
-     */
-    private Long userId;
-
-    /**
-     * 用户名
-     */
-    private String username;
-
-    /**
-     * 用户手机号
-     */
-    private String phone;
-
-    /**
-     * 用户邮箱
-     */
-    private String email;
-
-    /**
-     * 用户头像
-     */
-    private String userAvatar;
-
-    /**
-     * 用户简介
-     */
-    private String introduction;
 
     /**
      * 用户收藏的歌曲数
@@ -66,10 +36,4 @@ public class UserVO implements Serializable {
      * 用户访客数
      */
     private Long visitorCount;
-
-    /**
-     * 用户歌单列表（前三个）
-     */
-    private List<PlaylistInfoVO> songListVOList;
-
 }

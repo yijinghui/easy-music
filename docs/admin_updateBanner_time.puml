@@ -1,0 +1,53 @@
+@startuml
+title 更新轮播图时序图 - 简化版
+
+actor 管理员 as Admin
+participant "BannerController" as Ctrl
+participant "BannerService" as Svc
+participant "BannerMapper" as Mapper
+database "MySQL" as DB
+database "Redis" as Redis
+participant "MinioService" as Minio
+
+Admin -> Ctrl: 更新轮播图
+activate Ctrl
+
+Ctrl -> Svc: updateBanner()
+activate Svc
+
+Svc -> Redis: 清除缓存
+
+alt 上传成功
+    Minio --> Svc: 返回bannerUrl
+    deactivate Minio
+else 上传失败
+    Minio --> Svc: 返回null / 抛出异常
+    deactivate Minio
+    Svc --> Ctrl: 返回"文件上传失败"
+    Ctrl --> Admin: 返回错误信息
+    deactivate Ctrl
+    deactivate Svc
+end
+
+Svc -> Mapper: 查询旧轮播图
+Mapper -> DB: 查询
+DB --> Mapper: 返回Banner
+Mapper --> Svc: 返回b
+
+alt 旧URL存在
+    Svc -> Minio: 删除旧文件
+end
+
+Svc -> Mapper: 更新URL
+Mapper -> DB: 更新
+
+alt 更新失败
+    Svc --> Admin: 更新失败
+else 更新成功
+    Svc --> Admin: 更新成功
+end
+
+deactivate Svc
+deactivate Ctrl
+
+@enduml

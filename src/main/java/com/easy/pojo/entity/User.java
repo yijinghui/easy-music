@@ -109,4 +109,10 @@ public class User implements Serializable {
     @TableField("status")
     private Integer userStatus;
 
+    /**
+     * 用户角色：0-普通用户，1-歌手
+     */
+    @TableField("role")
+    private Integer role;
+
 }

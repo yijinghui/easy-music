@@ -1,0 +1,37 @@
+@startuml
+title 点赞/取消点赞评论活动图
+
+start
+
+:用户发起点赞/取消点赞请求(commentId, likeStatus);
+
+:从ThreadLocal获取当前用户ID;
+
+:查询数据库校验评论是否存在;
+
+if (评论是否存在?) then (否)
+    :返回"评论不存在";
+    stop
+endif
+
+if (likeStatus == 0?) then (是-取消点赞)
+    :从Redis Set中删除用户ID;
+
+    if (删除是否成功?) then (否)
+        :返回"取消点赞失败";
+        stop
+    endif
+else (否-点赞)
+    :向Redis Set中添加用户ID;
+
+    if (添加是否成功?) then (否)
+        :返回"点赞失败";
+        stop
+    endif
+endif
+
+:返回操作成功;
+
+stop
+
+@enduml

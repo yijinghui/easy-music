@@ -1,0 +1,24 @@
+@startuml
+title MinIO文件上传活动图
+
+start
+
+:调用方发起上传请求(file, folder);
+
+:生成唯一文件名;
+
+:获取文件输入流;
+
+:调用MinIO客户端上传文件;
+
+if (上传是否成功?) then (是)
+    :拼接访问URL;
+    :返回文件URL;
+else (否)
+    :捕获异常;
+    :抛出"文件上传失败"异常;
+endif
+
+stop
+
+@enduml

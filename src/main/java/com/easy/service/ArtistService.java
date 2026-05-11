@@ -3,6 +3,7 @@ package com.easy.service;
 import com.easy.pojo.dto.ArtistAddDTO;
 import com.easy.pojo.dto.ArtistPageQueryDTO;
 import com.easy.pojo.dto.ArtistUpdateDTO;
+import com.easy.pojo.dto.ArtistAuthDTO;
 import com.easy.pojo.entity.Artist;
 import com.easy.pojo.vo.ArtistNameVO;
 import com.easy.result.PageResult;
@@ -27,4 +28,7 @@ public interface ArtistService {
     Result<Long> getAllArtistsCount(Integer gender, String area);
 
     Result<List<ArtistNameVO>> getAllArtistNames();
+
+
+    Result artistAuth(ArtistAuthDTO artistAuthDTO);
 }

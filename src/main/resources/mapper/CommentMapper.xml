@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.easy.mapper.CommentMapper">
+
+    <select id="selectCommentInfo" resultType="com.easy.pojo.vo.CommentInfoVO">
+        select
+            c1.id as commentId,
+            c1.user_id as userId,
+            u.username as username,
+            u.user_avatar as userAvatar,
+            c1.content as content,
+            c1.create_time as createTime,
+            u2.username as replyUsername
+        from tb_comment c1
+                 join tb_user u ON c1.user_id = u.id
+                 left join tb_comment c2 ON c1.parent_id = c2.id
+                 left join tb_user u2 ON c2.user_id = u2.id
+        WHERE c1.id = #{commentId}
+    </select>
+    <select id="selectCommentInfos" resultType="com.easy.pojo.vo.CommentInfoVO">
+        select
+            c1.id as commentId,
+            c1.user_id as userId,
+            u.username as username,
+            u.user_avatar as userAvatar,
+            c1.content as content,
+            c1.create_time as createTime,
+            u2.username as replyUsername
+        from tb_comment c1
+                 join tb_user u ON c1.user_id = u.id
+                 left join tb_comment c2 ON c1.parent_id = c2.id
+                 left join tb_user u2 ON c2.user_id = u2.id
+        WHERE c1.id in
+        <foreach item="item" collection="commentIds" separator="," open="(" close=")" index="index">
+            #{item}
+        </foreach>
+        order by field(c1.id,
+        <foreach item="item" collection="commentIds" separator="," index="index">
+            #{item}
+        </foreach>
+        )
+    </select>
+</mapper>

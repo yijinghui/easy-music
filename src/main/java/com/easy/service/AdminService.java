@@ -2,6 +2,7 @@ package com.easy.service;
 
 
 import com.easy.pojo.dto.AdminDTO;
+import com.easy.pojo.dto.AdminUpdatePasswordDTO;
 import com.easy.result.Result;
 import jakarta.validation.Valid;
 
@@ -12,4 +13,5 @@ public interface AdminService {
 
     Result logout(String token);
 
+    Result updatePassword(@Valid AdminUpdatePasswordDTO updatePasswordDTO);
 }

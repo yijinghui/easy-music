@@ -68,11 +68,19 @@ public class Artist implements Serializable {
     @TableField("area")
     private String area;
 
+
+
     /**
      * 歌手简介
      */
     @TableField("introduction")
     private String introduction;
+
+    /**
+     * 歌手关联的用户id
+     */
+    @TableField("user_id")
+    private Long userId;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @TableField("create_time")

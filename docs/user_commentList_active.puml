@@ -1,0 +1,38 @@
+@startuml
+title 查询歌曲评论列表活动图
+
+start
+
+:用户请求评论列表(songId, rootId, maxTime, offset);
+
+:获取当前用户ID;
+
+if (rootId > 0?) then (是)
+    :从Redis查询二级评论ID列表(正序);
+else (否)
+    :从Redis查询一级评论ID列表(倒序);
+endif
+
+if (缓存是否为空?) then (是)
+    :返回空列表;
+    stop
+endif
+
+:遍历评论ID列表;
+:从Redis批量获取评论内容;
+
+if (是否存在未命中的评论?) then (是)
+    :从MySQL批量查询未命中评论;
+    :将查询结果批量缓存到Redis;
+else (否)
+endif
+
+:从Redis批量查询点赞数和是否点赞;
+
+:构建ScrollResult对象;
+
+:返回评论列表;
+
+stop
+
+@enduml

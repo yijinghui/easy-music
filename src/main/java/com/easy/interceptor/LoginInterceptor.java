@@ -3,7 +3,10 @@ package com.easy.interceptor;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.exceptions.TokenExpiredException;
+import com.easy.config.RolePermissionManager;
+import com.easy.constant.JwtClaimsConstant;
 import com.easy.constant.MessageConstant;
+import com.easy.enumeration.RoleEnum;
 import com.easy.utils.JwtUtil;
 import com.easy.utils.ThreadLocalUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,8 +24,11 @@ public class LoginInterceptor implements HandlerInterceptor {
 
     private final StringRedisTemplate stringRedisTemplate;
 
-    public LoginInterceptor(StringRedisTemplate stringRedisTemplate) {
+    private final RolePermissionManager RolePermissionManager;
+
+    public LoginInterceptor(StringRedisTemplate stringRedisTemplate, RolePermissionManager rolePermissionManager) {
         this.stringRedisTemplate = stringRedisTemplate;
+        RolePermissionManager = rolePermissionManager;
     }
 
 
@@ -54,41 +60,41 @@ public class LoginInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        log.info("token: {}", token);
         if (token.startsWith("Bearer ")){
             token = token.substring(7);
         }
-
-        // 从redis中获取相同的token
-        Map<String, Object> claims;
-
-        try{
-            claims = JwtUtil.parseToken(token);
-        }catch (TokenExpiredException e) {
-            // token过期
-            sendErrorResponse(response, 401, "Token已过期，请重新登录");
-            return false;
-        } catch (JWTVerificationException e) {
-            // token无效
-            sendErrorResponse(response, 401, "无效的Token");
-            return false;
-        }
-
+        Map<String, Object> claims = ThreadLocalUtil.get();
         if (claims == null){
-            log.info("用户未登录，返回信息：{}", "token不合法");
-            sendErrorResponse(response, 401, "无效的Token");
+            log.info("未登录，返回信息：{}", MessageConstant.NOT_LOGIN);
+            sendErrorResponse(response, 401, MessageConstant.NOT_LOGIN);
             return false;
         }
-        long userId = Long.parseLong(claims.get("userId").toString());
 
-        String value = stringRedisTemplate.opsForValue().get("login:user:"+userId);
+        log.info("claims{}", claims);
+        String userId = claims.get(JwtClaimsConstant.USER_ID).toString();
+        String role = claims.get(JwtClaimsConstant.ROLE).toString();
+        log.info("用户角色为：{}", role);
+        String value = stringRedisTemplate.opsForValue().get("login:"+role+":"+userId);
         if (value == null){
             log.info("身份已过期，返回信息：{}", MessageConstant.NOT_LOGIN);
             sendErrorResponse(response, 401, "身份已过期");
             return false;
         }
 
-        ThreadLocalUtil.set(claims);
+        if (!token.equals(value)){
+            log.info("无效的Token，返回信息：{}", MessageConstant.NOT_LOGIN);
+            sendErrorResponse(response, 401, "无效的Token");
+            return false;
+        }
+
+        // 查看用户是否有权限访问该接口
+        String requestURI = request.getRequestURI();
+        if (!RolePermissionManager.hasPermission(role, requestURI)){
+            log.info("无权限访问该接口，返回信息：{}", MessageConstant.NO_PERMISSION);
+            sendErrorResponse(response, 403, "无权限访问该接口");
+            return false;
+        }
+
 
         return true;
     }

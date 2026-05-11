@@ -1,0 +1,37 @@
+@startuml
+title 管理端注销登录时序图
+
+actor 管理员 as Admin
+participant "AdminController" as Ctrl
+participant "AdminService" as Svc
+database "Redis" as Redis
+
+Admin -> Ctrl: 提交注销请求(token)
+activate Ctrl
+
+Ctrl -> Svc: logout(token)
+activate Svc
+
+Svc -> Redis: 查询token是否存在
+Redis --> Svc: 返回结果
+
+alt token不存在
+    Svc --> Ctrl: 返回"登录已过期"
+else token无效
+    Svc --> Ctrl: 返回"登录异常"
+else token有效
+    Svc -> Redis: 删除token
+    Redis --> Svc: 返回删除结果
+
+    alt 删除成功
+        Svc --> Ctrl: 返回"注销成功"
+    else 删除失败
+        Svc --> Ctrl: 返回"注销失败"
+    end
+end
+
+Ctrl --> Admin: 返回结果
+deactivate Ctrl
+deactivate Svc
+
+@enduml

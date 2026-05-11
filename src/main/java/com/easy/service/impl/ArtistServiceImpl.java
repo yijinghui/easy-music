@@ -8,20 +8,25 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.easy.constant.MessageConstant;
+import com.easy.mapper.ArtistAuthMapper;
 import com.easy.mapper.ArtistMapper;
+import com.easy.mapper.UserMapper;
 import com.easy.pojo.dto.ArtistAddDTO;
 import com.easy.pojo.dto.ArtistPageQueryDTO;
 import com.easy.pojo.dto.ArtistUpdateDTO;
+import com.easy.pojo.dto.ArtistAuthDTO;
 import com.easy.pojo.entity.Artist;
+import com.easy.pojo.entity.ArtistAuth;
+import com.easy.pojo.entity.User;
 import com.easy.pojo.vo.ArtistNameVO;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
 import com.easy.service.ArtistService;
 import com.easy.service.MinIOService;
-import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
@@ -31,9 +36,14 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Tag(name = "Admin端-歌手管理接口")
 public class ArtistServiceImpl extends ServiceImpl<ArtistMapper, Artist> implements ArtistService {
 
     private final MinIOService minIOService;
+
+    private final ArtistAuthMapper artistAuthMapper;
+
+    private final UserMapper userMapper;
 
     @Override
     public Result<PageResult<Artist>> page(ArtistPageQueryDTO pageQueryDTO) {
@@ -168,6 +178,41 @@ public class ArtistServiceImpl extends ServiceImpl<ArtistMapper, Artist> impleme
 
         return Result.success(artistNameVOList);
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result artistAuth(ArtistAuthDTO artistAuthDTO) {
+        // 1.检查歌手是否存在
+        Artist artist = baseMapper.selectById(artistAuthDTO.getArtistId());
+        if (artist == null) {
+            return Result.error("歌手不存在");
+        }
+        // 2.检查歌手是否已经认证
+        if (artist.getUserId()!=null) {
+            return Result.error("歌手已经认证");
+        }
+
+        // 查询认证申请是否已取消
+        ArtistAuth artistAuth = artistAuthMapper.selectById(artistAuthDTO.getArtistId());
+        if (artistAuth == null || artistAuth.getStatus() == 2) {
+            return Result.error("歌手已经取消认证");
+        }
+        Long userId = artistAuthDTO.getUserId();
+        Integer status = artistAuthDTO.getStatus();
+        artistAuth.setAuditTime(LocalDateTime.now());
+        BeanUtil.copyProperties(artistAuthDTO, artistAuth);
+        if (status==0){
+            artistAuthMapper.updateById(artistAuth);
+        }else if (status==1){
+            baseMapper.updateById(artist.setUserId(userId));
+            artistAuthMapper.updateById(artistAuth);
+            userMapper.updateById(new User().setUserId(userId).setRole(1));
+        }
+
+        return status==0?Result.success("取消认证成功"):Result.success("认证成功");
+    }
+
+
 
 
 }

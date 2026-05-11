@@ -1,0 +1,40 @@
+@startuml
+title 歌手认证审核时序图
+
+actor 管理员 as Admin
+participant "ArtistController(管理员)" as Ctrl
+participant "ArtistService" as Svc
+participant "ArtistMapper" as ArtistMapper
+participant "ArtistAuthMapper" as AuthMapper
+database "MySQL" as DB
+
+Admin -> Ctrl: 审核结果
+activate Ctrl
+
+Ctrl -> Svc: artistAuth(artistAuthDTO)
+activate Svc
+
+Svc -> ArtistMapper: 查询歌手是否存在
+DB --> Svc: 返回artist
+
+alt 歌手不存在
+    Svc --> Admin: 歌手不存在
+else 歌手已认证
+    Svc --> Admin: 歌手已经认证
+else 认证申请已取消
+    Svc --> Admin: 歌手已经取消认证
+else 其他情况
+    alt status == 0 (取消认证)
+        Svc -> AuthMapper: 更新认证申请状态
+        Svc --> Admin: 取消认证成功
+    else status == 1 (通过认证)
+        Svc -> ArtistMapper: 更新歌手userId
+        Svc -> AuthMapper: 更新认证申请状态
+        Svc --> Admin: 认证成功
+    end
+end
+
+deactivate Svc
+deactivate Ctrl
+
+@enduml

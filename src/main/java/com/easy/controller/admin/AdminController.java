@@ -2,6 +2,7 @@ package com.easy.controller.admin;
 
 
 import com.easy.pojo.dto.AdminDTO;
+import com.easy.pojo.dto.AdminUpdatePasswordDTO;
 import com.easy.result.Result;
 import com.easy.service.AdminService;
 import com.easy.utils.BindingResultUtil;
@@ -33,22 +34,22 @@ public class AdminController {
     }
 
 
-    /*@Operation(summary = "管理员注册接口")
-    @PostMapping("/register")
-    public Result register(@RequestBody @Valid AdminDTO adminDTO, BindingResult bindingResult) {
+    @Operation(summary = "管理员登出接口")
+    @PostMapping("/logout")
+    public Result logout(@RequestHeader("Authorization") String token) {
+        return adminService.logout(token);
+    }
+
+    @Operation(summary = "管理员修改密码接口")
+    @PostMapping("/updatePassword")
+    public Result updatePassword(@RequestBody @Valid AdminUpdatePasswordDTO updatePasswordDTO, BindingResult bindingResult) {
         // 校验失败时，返回错误信息
         String errorMessage = BindingResultUtil.handleBindingResultErrors(bindingResult);
         if (errorMessage != null) {
             return Result.error(errorMessage);
         }
 
-        return adminService.register(adminDTO);
-    }*/
-
-    @Operation(summary = "管理员登出接口")
-    @PostMapping("/logout")
-    public Result logout(@RequestHeader("Authorization") String token) {
-        return adminService.logout(token);
+        return adminService.updatePassword(updatePasswordDTO);
     }
 
 

@@ -23,6 +23,8 @@ public class SignInController {
 
     private final SignInService signInService;
 
+
+
     @PostMapping
     @Operation(summary = "用户签到接口")
     public Result signIn() {

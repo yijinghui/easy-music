@@ -1,0 +1,30 @@
+@startuml
+title 用户上传歌曲活动图
+
+start
+:提交上传请求;
+
+:检查登录状态(拦截器);
+
+
+:检查歌手权限;
+
+if (权限通过?) then (是)
+    :上传文件到MinIO;
+    if (上传成功?) then (是)
+        :保存到数据库;
+        if (保存成功?) then (是)
+            :返回"上传成功";
+        else (否)
+            :返回"保存失败";
+        endif
+    else (否)
+        :返回"上传失败";
+    endif
+else (否)
+    :返回"权限不足";
+endif
+
+stop
+
+@enduml

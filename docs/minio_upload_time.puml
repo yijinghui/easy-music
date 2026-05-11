@@ -1,0 +1,44 @@
+@startuml
+title MinIO文件上传时序图
+
+actor 调用方 as Caller
+participant "MinioService" as Svc
+participant "MinioClient" as Client
+database "MinIO" as MinIO
+
+Caller -> Svc: uploadFile(file, folder)
+activate Svc
+
+
+Svc -> Svc: 生成唯一文件名
+
+
+Svc -> file: 获取文件输入流
+file --> Svc: 返回文件输入流
+
+
+
+Svc -> Client: 将对象传入到MinIO客户端
+activate Client
+
+Client -> MinIO: 上传文件
+activate MinIO
+MinIO --> Client: 上传成功
+deactivate MinIO
+
+Client --> Svc: 返回上传结果
+deactivate Client
+
+alt 上传异常
+    Svc -> Svc: 捕获异常
+    Svc --> Caller: 抛出"文件上传失败"异常
+end
+
+
+Svc -> Svc: 拼接访问URL
+
+Svc --> Caller: 返回文件URL
+
+deactivate Svc
+
+@enduml

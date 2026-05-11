@@ -7,7 +7,8 @@ public enum RoleEnum {
 
 
     ADMIN("ROLE_ADMIN"),
-    USER("ROLE_USER");
+    USER("ROLE_USER"),
+    ARTIST("ROLE_ARTIST");
 
     private final String role;
 

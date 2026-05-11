@@ -2,7 +2,9 @@ package com.easy.service.impl;
 
 
 import cn.hutool.core.bean.BeanUtil;
+import com.easy.enumeration.RoleEnum;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -14,18 +16,20 @@ import com.easy.enumeration.RoleEnum;
 import com.easy.mapper.UserMapper;
 import com.easy.pojo.dto.*;
 import com.easy.pojo.entity.User;
+import com.easy.pojo.vo.PlaylistInfoVO;
 import com.easy.pojo.vo.UserAdminVO;
+import com.easy.pojo.vo.UserStatVO;
 import com.easy.pojo.vo.UserVO;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
-import com.easy.service.EmailService;
-import com.easy.service.MinIOService;
-import com.easy.service.UserService;
+import com.easy.service.*;
 import com.easy.utils.JwtUtil;
 import com.easy.utils.ThreadLocalUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +39,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 
 @Service
@@ -43,13 +46,16 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
-    private final UserMapper userMapper;
 
     private final MinIOService minIOService;
 
     private final StringRedisTemplate stringRedisTemplate;
 
     private final EmailService emailService;
+
+    private final StatService statService;
+
+    private final PlaylistService playlistService;
 
 
     @Override
@@ -67,7 +73,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 .eq(userStatus != null, User::getUserStatus, userStatus)
                 .orderByDesc(User::getCreateTime);
         // 2.分页查询
-        IPage<User> userPage = userMapper.selectPage(page, queryWrapper);
+        IPage<User> userPage = baseMapper.selectPage(page, queryWrapper);
 
         // 3.判断查询结果是否为空2
         if (userPage.getTotal() == 0){
@@ -96,7 +102,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 .or()
                 .eq("email", userAddDTO.getEmail());
         // 2.查询用户信息
-        List<User> userList = userMapper.selectList(queryWrapper);
+        List<User> userList = baseMapper.selectList(queryWrapper);
         // 3.判断用户信息是否已存在
         if (!userList.isEmpty()){
             for (User user : userList){
@@ -118,7 +124,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         newUser.setPassword(passwordMd5);
         newUser.setCreateTime(LocalDateTime.now());
         newUser.setUpdateTime(LocalDateTime.now());
-        int result = userMapper.insert(newUser);
+        int result = baseMapper.insert(newUser);
 
         if (result == 0){
             return Result.error("用户添加失败");
@@ -127,13 +133,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return Result.success("用户添加成功");
     }
 
+    @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
     public Result updateUser(UserDTO userDTO) {
         Long id = userDTO.getUserId();
         if (id == null){
             return Result.error("用户ID不能为空");
         }
 
-        User user = userMapper.selectById(id);
+        User user = baseMapper.selectById(id);
         if (user == null){
             return Result.error("用户不存在");
         }
@@ -141,7 +148,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         BeanUtils.copyProperties(userDTO, newUser);
         newUser.setUserId(id);
         newUser.setUpdateTime(LocalDateTime.now());
-        int result = userMapper.updateById(newUser);
+        int result = baseMapper.updateById(newUser);
         if (result == 0){
             return Result.error("用户更新失败");
         }
@@ -150,23 +157,24 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     public Result updateUserStatus(Long userId, Integer userStatus) {
-        User user = userMapper.selectById(userId);
+        User user = baseMapper.selectById(userId);
         if (user == null){
             return Result.error("用户不存在");
         }
         user.setUserStatus(userStatus);
         user.setUpdateTime(LocalDateTime.now());
-        int result = userMapper.updateById(user);
+        int result = baseMapper.updateById(user);
         if (result == 0){
             return Result.error("用户状态更新失败");
         }
         return Result.success("用户状态更新成功");
     }
 
+    @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
     public Result deleteUser(Long userId) {
         if(userId== null) return Result.error("用户ID不能为空");
 
-        User user = userMapper.selectById(userId);
+        User user = baseMapper.selectById(userId);
         if (user == null) return Result.error("用户不存在");
 
         // 删除用户头像
@@ -175,13 +183,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             minIOService.deleteFile(avatar);
         }
 
-        return Result.success(userMapper.deleteById(userId) == 1 ? "用户删除成功" : "用户删除失败");
+        return Result.success(baseMapper.deleteById(userId) == 1 ? "用户删除成功" : "用户删除失败");
     }
 
     @Transactional(rollbackFor = Exception.class)
     public Result deleteUsers(List<Long> userIds) {
         // 批量查询用户
-        List<User> userList = userMapper.selectByIds(userIds);
+        List<User> userList = baseMapper.selectByIds(userIds);
 
         List<Long> userIdList = userList.stream().map(User::getUserId).toList();
 
@@ -196,7 +204,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             }
         }
 
-        if (userMapper.deleteByIds(userIdList) == 0) {
+        if (baseMapper.deleteByIds(userIdList) == 0) {
             return Result.error("用户批量删除失败");
         }
 
@@ -207,7 +215,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public Result loginByPassword(UserPasswordLoginDTO userLoginDTO) {
         // 根据用户名查询用户信息
-        User user = userMapper.selectOne(new QueryWrapper<User>().eq("username", userLoginDTO.getUsername()));
+        User user = baseMapper.selectOne(new QueryWrapper<User>().eq("username", userLoginDTO.getUsername()));
 
         if (user == null){
             return Result.error("用户不存在");
@@ -221,15 +229,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             return Result.error("密码错误");
         }
 
+        Integer role= user.getRole();
         Long userId = user.getUserId();
         // 4.1.生成Jwt令牌
         Map<String, Object> claims = new HashMap<>();
-        claims.put(JwtClaimsConstant.ROLE, RoleEnum.USER.getRole());
+        claims.put(JwtClaimsConstant.ROLE, (role==0?RoleEnum.USER:RoleEnum.ADMIN).getRole());
         claims.put(JwtClaimsConstant.USER_ID, userId);
         claims.put(JwtClaimsConstant.USERNAME, user.getUsername());
         String token = JwtUtil.generateToken(claims);
         // 4.2.将token存入Redis
-        stringRedisTemplate.opsForValue().set("login:user:" + userId, token, 10, TimeUnit.HOURS);
+        stringRedisTemplate.opsForValue().set("login:"+RoleEnum.USER.getRole()+":" + userId, token, 10, TimeUnit.HOURS);
 
         // 5.返回结果
         return Result.success("登录成功", token);
@@ -241,7 +250,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         String email = userLoginDTO.getEmail();
 
-        User user = userMapper.selectOne(new QueryWrapper<User>().eq("email", email));
+        User user = baseMapper.selectOne(new QueryWrapper<User>().eq("email", email));
 
         if (user == null){
             return Result.error("用户不存在");
@@ -267,7 +276,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         claims.put(JwtClaimsConstant.USERNAME, user.getUsername());
         String token = JwtUtil.generateToken(claims);
         // 4.2.将token存入Redis
-        stringRedisTemplate.opsForValue().set("login:user:" + userId, token, 10, TimeUnit.HOURS);
+        stringRedisTemplate.opsForValue().set("login:"+RoleEnum.USER.getRole()+":" + userId + userId, token, 10, TimeUnit.HOURS);
 
         // 5.返回结果
         return Result.success("登录成功", token);
@@ -290,7 +299,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             return Result.error("验证码错误");
         }
 
-        User user = userMapper.selectOne(new QueryWrapper<User>().eq("email", email));
+        User user = baseMapper.selectOne(new QueryWrapper<User>().eq("email", email));
 
         if (user != null){
             return Result.error("邮箱已存在");
@@ -303,7 +312,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setUserStatus(1);
         user.setCreateTime(LocalDateTime.now());
         user.setUpdateTime(LocalDateTime.now());
-        int result = userMapper.insert(user);
+        int result = baseMapper.insert(user);
         if (result == 0){
             return Result.error("用户注册失败");
         }
@@ -341,7 +350,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         Long userId = ThreadLocalUtil.getUserId();
 
-        Boolean delete = stringRedisTemplate.delete("login:user:" + userId);
+        Boolean delete = stringRedisTemplate.delete("login:"+RoleEnum.USER.getRole()+":" + userId);
 
         if (!delete){
             return Result.error("用户未登录");
@@ -352,18 +361,33 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
+    @Cacheable(cacheNames = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
     public Result<UserVO> userInfo() {
 
         Long userId = ThreadLocalUtil.getUserId();
-        User user = userMapper.selectById(userId);
+
+
+        User user = baseMapper.selectById(userId);
         UserVO userVO = new UserVO();
+
         BeanUtils.copyProperties(user, userVO);
+
+        // 统计用户歌单、歌曲、收藏数
+        UserStatVO userStatVO = statService.getUserStat(userId);
+
+        BeanUtils.copyProperties(userStatVO, userVO);
+
+        // 获取歌单的基本信息
+        List<PlaylistInfoVO> playlistInfoVOList = playlistService.getPlaylistInfo(userId);
+        userVO.setSongListVOList(playlistInfoVOList);
+
 
 
         return Result.success(userVO);
     }
 
     @Override
+    @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
     public Result updateUserInfo(UserUpdateDTO updateDTO) {
 
         Long userId =ThreadLocalUtil.getUserId();
@@ -371,7 +395,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         updateDTO.setUserId(userId);
 
         // 查询用户是否存在
-        User user = userMapper.selectById(userId);
+        User user = baseMapper.selectById(userId);
         if (user == null){
             return Result.error("用户不存在");
         }
@@ -380,18 +404,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         String phone = updateDTO.getPhone();
 
 
-        if (userMapper.selectCount(new QueryWrapper<User>().eq("username",username))>0){
+        if (baseMapper.selectCount(new QueryWrapper<User>().eq("username",username))>0){
             return Result.error("用户名已存在");
         }
 
-        if (userMapper.selectCount(new QueryWrapper<User>().eq("phone",phone))>0){
+        if (baseMapper.selectCount(new QueryWrapper<User>().eq("phone",phone))>0){
             return Result.error("手机号已存在");
         }
 
         BeanUtil.copyProperties(updateDTO, user);
 
         user.setUpdateTime(LocalDateTime.now());
-        int result = userMapper.updateById(user);
+        int result = baseMapper.updateById(user);
         if (result == 0){
             return Result.error("邮箱修改失败");
         }
@@ -416,7 +440,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
 
         String email = userResetPasswordDTO.getEmail();
-        User user = userMapper.selectOne(new QueryWrapper<User>().eq("email", email));
+        User user = baseMapper.selectOne(new QueryWrapper<User>().eq("email", email));
         if (user == null){
             return Result.error("用户不存在");
         }
@@ -431,7 +455,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         user.setPassword(DigestUtils.md5DigestAsHex(userResetPasswordDTO.getNewPassword().getBytes()));
         user.setUpdateTime(LocalDateTime.now());
-        int result = userMapper.updateById(user);
+        int result = baseMapper.updateById(user);
         if (result == 0){
             return Result.error("密码重置失败");
         }
@@ -447,7 +471,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         String newEmail = updateDTO.getNewEmail();
 
-        if (userMapper.selectCount(new QueryWrapper<User>().eq("email",newEmail))>0){
+        if (baseMapper.selectCount(new QueryWrapper<User>().eq("email",newEmail))>0){
             return Result.error("邮箱已存在");
         }
 
@@ -462,14 +486,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             return Result.error("验证码错误");
         }
 
-        User user = userMapper.selectById(userId);
+        User user = baseMapper.selectById(userId);
         if (user == null){return Result.error("用户不存在");}
 
         if (newEmail.equals(user.getEmail())){return Result.error("新邮箱不能与旧邮箱相同");}
 
         user.setEmail(newEmail);
         user.setUpdateTime(LocalDateTime.now());
-        if (userMapper.updateById(user) == 0){
+        if (baseMapper.updateById(user) == 0){
             return Result.error("用户更新失败");
         }
         return Result.success("用户更新成功");
@@ -477,18 +501,19 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
 
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
     public Result updateUserAvatar(MultipartFile avatar) {
         String avatarUrl = minIOService.uploadFile(avatar, "users");
 
         Long userId = ThreadLocalUtil.getUserId();
 
-        User user = userMapper.selectById(userId);
+        User user = baseMapper.selectById(userId);
         if (user == null){
             return Result.error("用户不存在");
         }
         user.setUserAvatar(avatarUrl);
         user.setUpdateTime(LocalDateTime.now());
-        if (userMapper.updateById(user) == 0){
+        if (baseMapper.updateById(user) == 0){
             return Result.error("头像更新失败");
         }
         return Result.success("头像更新成功");
@@ -496,17 +521,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
 
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
     public Result deleteAccount(String token) {
         Long userId = ThreadLocalUtil.getUserId();
 
         stringRedisTemplate.delete("login:user:" + userId);
 
-        User user = userMapper.selectById(userId);
+        User user = baseMapper.selectById(userId);
 
         // 删除头像
         minIOService.deleteFile(user.getUserAvatar());
 
-        return userMapper.deleteById(userId) == 0 ? Result.error("注销失败") : Result.success("注销成功");
+        return baseMapper.deleteById(userId) == 0 ? Result.error("注销失败") : Result.success("注销成功");
     }
 
 }

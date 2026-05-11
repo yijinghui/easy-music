@@ -1,0 +1,24 @@
+@startuml
+title 管理端注销登录活动图
+
+start
+:提交注销请求;
+:查询Redis中的token;
+
+if (token存在?) then (是)
+    if (token有效?) then (是)
+        :删除Redis中的token;
+        if (删除成功?) then (是)
+            :注销成功;
+        else (否)
+            :注销失败;
+        endif
+    else (否)
+        :登录异常;
+    endif
+else (否)
+    :登录已过期;
+endif
+stop
+
+@enduml

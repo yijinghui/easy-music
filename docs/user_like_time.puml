@@ -1,0 +1,73 @@
+@startuml
+title 点赞/取消点赞评论时序图
+
+actor 用户 as User
+participant "CommentController" as Ctrl
+participant "CommentService" as Svc
+participant "CommentMapper" as Mapper
+database "MySQL" as DB
+database "Redis" as Redis
+
+User -> Ctrl: 点赞/取消点赞请求(commentId, likeStatus)
+activate Ctrl
+
+Ctrl -> Svc: likeComment(commentId, likeStatus)
+activate Svc
+
+
+
+Svc -> Svc: 从ThreadLocal获取userId
+
+
+Svc -> Mapper: selectById(commentId)
+activate Mapper
+Mapper -> DB: 查询评论
+DB --> Mapper: 返回Comment对象
+Mapper --> Svc: 返回comment
+deactivate Mapper
+
+alt 评论不存在
+    Svc --> Ctrl: 返回"评论不存在"
+    Ctrl --> User: 返回错误信息
+    deactivate Ctrl
+    deactivate Svc
+end
+
+
+alt likeStatus == 0 (取消点赞)
+    Svc -> Redis: 删除set中的用户id
+    activate Redis
+    Redis --> Svc: 返回移除结果
+    deactivate Redis
+
+    alt 移除失败 (result == null 或 result == 0)
+        Svc --> Ctrl: 返回"取消点赞失败"
+        Ctrl --> User: 返回错误信息
+        deactivate Ctrl
+        deactivate Svc
+    end
+
+else likeStatus == 1 (点赞)
+    Svc -> Redis: 添加用户id至set中
+    activate Redis
+    Redis --> Svc: 返回添加结果
+    deactivate Redis
+
+    alt 添加失败 (result == null 或 result == 0)
+        Svc --> Ctrl: 返回"点赞失败"
+        Ctrl --> User: 返回错误信息
+        deactivate Ctrl
+        deactivate Svc
+        note right: 流程结束
+    end
+end
+
+
+
+Svc --> Ctrl: 返回成功
+Ctrl --> User: 返回成功信息
+
+deactivate Svc
+deactivate Ctrl
+
+@enduml

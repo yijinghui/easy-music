@@ -1,12 +1,19 @@
 package com.easy.interceptor;
 
 
+import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.exceptions.TokenExpiredException;
+import com.easy.constant.MessageConstant;
+import com.easy.utils.JwtUtil;
+import com.easy.utils.ThreadLocalUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 
@@ -31,8 +38,9 @@ public class RefreshTokenInterceptor implements HandlerInterceptor {
 
         String token = request.getHeader("Authorization");
 
+
         if (token == null){
-            return true; // 令牌不存在，直接放行
+            return true;
         }
 
         log.info("token: {}", token);
@@ -41,13 +49,25 @@ public class RefreshTokenInterceptor implements HandlerInterceptor {
         }
 
         // 从redis中获取相同的token
-        String value = stringRedisTemplate.opsForValue().get(token);
-        if (value == null){
+        Map<String, Object> claims;
+
+        try{
+            claims = JwtUtil.parseToken(token);
+        }catch (Exception e) {
             return true;
         }
 
-        stringRedisTemplate.expire(token, 1, TimeUnit.HOURS);
+        if (claims == null){
+            return true;
+        }
 
+        log.info("claims: {}", claims);
+        ThreadLocalUtil.set(claims);
+
+        long userId = Long.parseLong(claims.get("userId").toString());
+        String role = claims.get("role").toString();
+
+        stringRedisTemplate.expire("login:"+role+":"+userId, 1, TimeUnit.HOURS);
         return true;
 
 

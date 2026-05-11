@@ -4,6 +4,7 @@ package com.easy.controller.admin;
 import com.easy.pojo.dto.ArtistAddDTO;
 import com.easy.pojo.dto.ArtistPageQueryDTO;
 import com.easy.pojo.dto.ArtistUpdateDTO;
+import com.easy.pojo.dto.ArtistAuthDTO;
 import com.easy.pojo.entity.Artist;
 import com.easy.pojo.vo.ArtistNameVO;
 import com.easy.result.PageResult;
@@ -17,8 +18,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
+
+@RestController
 @RequestMapping("/admin")
-@Tag(name = "歌手管理接口")
+@Tag(name = "Admin端-歌手管理接口")
 @RequiredArgsConstructor
 public class ArtistController {
 
@@ -70,6 +73,12 @@ public class ArtistController {
     @GetMapping("/getAllArtistNames")
     public Result<List<ArtistNameVO>> getAllArtistNames() {
         return artistService.getAllArtistNames();
+    }
+
+    @Operation(summary = "歌手认证审核接口")
+    @PostMapping("/artistAuth")
+    public Result artistAuth(@RequestBody ArtistAuthDTO artistAuthDTO) {
+        return artistService.artistAuth(artistAuthDTO);
     }
 
 

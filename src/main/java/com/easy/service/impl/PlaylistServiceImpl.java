@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.easy.mapper.*;
 import com.easy.pojo.dto.*;
 import com.easy.pojo.entity.*;
+import com.easy.pojo.vo.PlaylistInfoVO;
 import com.easy.pojo.vo.PlaylistSongVO;
 import com.easy.pojo.vo.PlaylistVO;
 import com.easy.result.PageResult;
@@ -35,9 +36,6 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
 
     private final PlaylistSongMapper playlistSongMapper;
 
-    private final PlaylistCommentMapper playlistCommentMapper;
-
-    private final PlaylistLikeMapper playlistLikeMapper;
 
     private final UserMapper userMapper;
 
@@ -188,8 +186,8 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
         }
 
         // 删除歌单评论、点赞
-        playlistLikeMapper.delete(new LambdaQueryWrapper<PlaylistLike>().eq(PlaylistLike::getPlaylistId, playlistId));
-        playlistCommentMapper.delete(new LambdaQueryWrapper<PlaylistComment>().eq(PlaylistComment::getPlaylistId, playlistId));
+        /*playlistLikeMapper.delete(new LambdaQueryWrapper<PlaylistLike>().eq(PlaylistLike::getPlaylistId, playlistId));
+        playlistCommentMapper.delete(new LambdaQueryWrapper<PlaylistComment>().eq(PlaylistComment::getPlaylistId, playlistId));*/
 
         if (baseMapper.deleteById(playlistId)<=0){
             return Result.error("删除失败");
@@ -215,8 +213,8 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
         });
 
         // 批量删除点赞、评论
-        playlistLikeMapper.delete(new LambdaQueryWrapper<PlaylistLike>().in(PlaylistLike::getPlaylistId, playlistIds));
-        playlistCommentMapper.delete(new LambdaQueryWrapper<PlaylistComment>().in(PlaylistComment::getPlaylistId, playlistIds));
+        /*playlistLikeMapper.delete(new LambdaQueryWrapper<PlaylistLike>().in(PlaylistLike::getPlaylistId, playlistIds));
+        playlistCommentMapper.delete(new LambdaQueryWrapper<PlaylistComment>().in(PlaylistComment::getPlaylistId, playlistIds));*/
 
         if (baseMapper.deleteByIds(playlistIds)<=0){
             return Result.error("删除失败");
@@ -291,6 +289,11 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
 
         return Result.success("查询成功",
                 new PageResult<>(playlistSongVOPage.getTotal(),playlistSongVOPage.getRecords()));
+    }
+
+    @Override
+    public List<PlaylistInfoVO> getPlaylistInfo(Long userId) {
+        return baseMapper.selectPlaylistInfo(userId);
     }
 
 }

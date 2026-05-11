@@ -1,0 +1,38 @@
+@startuml
+title 歌手认证审核活动图
+
+start
+
+:管理员提交审核结果;
+
+:查询歌手是否存在;
+
+if (歌手是否存在?) then (否)
+    :返回"歌手不存在";
+    stop
+endif
+
+if (歌手是否已认证? artist.userId != null) then (是)
+    :返回"歌手已经认证";
+    stop
+endif
+
+:查询认证申请记录;
+
+if (认证申请是否已取消? status == 2) then (是)
+    :返回"歌手已经取消认证";
+    stop
+endif
+
+if (审核状态 status?) then (status == 0)
+    :更新认证申请状态;
+    :返回"取消认证成功";
+else (status == 1)
+    :更新歌手userId;
+    :更新认证申请状态;
+    :返回"认证成功";
+endif
+
+stop
+
+@enduml

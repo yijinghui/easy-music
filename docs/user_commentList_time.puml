@@ -1,0 +1,64 @@
+@startuml
+title 查询歌曲评论列表时序图
+
+actor 用户 as User
+participant "CommentController" as Ctrl
+participant "CommentService" as Svc
+database "Redis" as Redis
+database "MySQL" as DB
+participant "CommentMapper" as Mapper
+
+User -> Ctrl: 请求评论列表(songId, rootId, maxTime, offset)
+activate Ctrl
+
+Ctrl -> Svc: listSongComment(queryDTO)
+activate Svc
+
+Svc -> Svc: 获取当前用户ID
+
+
+alt rootId > 0 (二级评论)
+    Svc -> Redis: 查询二级评论的id列表 (正序查询)
+else rootId <= 0 (一级评论)
+    Svc -> Redis: 查询一级评论的id列表 (倒序查询)
+end
+
+Redis --> Svc: 返回评论ID列表
+
+alt 缓存为空
+    Svc --> Ctrl: 返回空结果
+    Ctrl --> User: 返回空列表
+    deactivate Ctrl
+    deactivate Svc
+end
+
+Svc -> Svc: 遍历评论ID列表
+
+Svc -> Redis: 批量获取评论内容
+
+Redis --> Svc: 返回评论内容列表
+
+alt 存在未命中的评论
+    Svc -> Mapper: 批量查询评论信息
+    activate Mapper
+    Mapper -> DB: 批量查询评论信息
+    DB --> Mapper: 返回评论信息列表
+    Mapper --> Svc: 返回CommentInfoVO列表
+    deactivate Mapper
+
+    Svc -> Redis: 批量缓存未命中评论
+end
+
+
+Svc -> Redis: 批量查询点赞数和是否点赞
+Redis --> Svc: 返回点赞统计数据
+
+Svc -> Svc: 构建ScrollResult对象
+
+Svc --> Ctrl: 返回ScrollResult
+Ctrl --> User: 返回评论列表
+
+deactivate Svc
+deactivate Ctrl
+
+@enduml
