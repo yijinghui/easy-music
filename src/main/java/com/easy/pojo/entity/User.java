@@ -42,6 +42,12 @@ public class User implements Serializable {
     private Long userId;
 
     /**
+     * 歌手 id
+     */
+    @TableField("artist_id")
+    private Long artistId;
+
+    /**
      * 用户名
      * 用户名格式：4-16位字符（字母、数字、下划线、连字符）
      */
@@ -108,11 +114,5 @@ public class User implements Serializable {
      */
     @TableField("status")
     private Integer userStatus;
-
-    /**
-     * 用户角色：0-普通用户，1-歌手
-     */
-    @TableField("role")
-    private Integer role;
 
 }

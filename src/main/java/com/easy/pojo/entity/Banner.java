@@ -46,5 +46,5 @@ public class Banner implements Serializable {
      * 轮播图状态：0-启用，1-禁用
      */
     @TableField("status")
-    private BannerStatusEnum bannerStatus;
+    private Integer bannerStatus;
 }

@@ -42,6 +42,12 @@ public class UserVO implements Serializable {
      */
     private String introduction;
 
+
+    /**
+     * 歌手ID
+     */
+    private Long artistId;
+
     /**
      * 用户收藏的歌曲数
      */
@@ -67,9 +73,7 @@ public class UserVO implements Serializable {
      */
     private Long visitorCount;
 
-    /**
-     * 用户歌单列表（前三个）
-     */
-    private List<PlaylistInfoVO> songListVOList;
+
+
 
 }

@@ -33,7 +33,7 @@ public class ThreadLocalUtil {
     public static Long getUserId() {
         Map<String, Object> map = (Map<String, Object>) THREAD_LOCAL.get();
 
-        if (map == null || map.isEmpty()) return -1L;
+        if (map == null || map.isEmpty()) return null;
 
         Object userIdObj = map.get(JwtClaimsConstant.USER_ID);
 

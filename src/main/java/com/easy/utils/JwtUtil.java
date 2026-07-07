@@ -13,8 +13,7 @@ public class JwtUtil {
 
     // 密钥
     private static final String SECRET_KEY = "EASY_MUSIC";
-    // 设置 JWT 的过期时间 6 小时
-    private static final long EXPIRATION_TIME = 1000 * 60 * 60 * 6;
+
 
     /**
      * 生成 JWT token
@@ -25,7 +24,6 @@ public class JwtUtil {
     public static String generateToken(Map<String, Object> claims) {
         return JWT.create()
                 .withClaim("claims", claims) // 自定义的业务数据
-                .withExpiresAt(new Date(System.currentTimeMillis() + EXPIRATION_TIME)) // 设置过期时间
                 .sign(Algorithm.HMAC256(SECRET_KEY)); // 使用 HMAC256 算法加密
     }
 

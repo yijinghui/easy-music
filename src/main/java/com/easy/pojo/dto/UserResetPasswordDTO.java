@@ -12,7 +12,7 @@ import java.io.Serial;
 import java.io.Serializable;
 
 @Data
-public class UserResetPasswordDTO implements Serializable {
+public class  UserResetPasswordDTO implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;

@@ -3,21 +3,16 @@ package com.easy.service;
 import com.easy.pojo.dto.*;
 import com.easy.pojo.vo.UserVO;
 import com.easy.result.PageResult;
-import com.easy.pojo.vo.UserAdminVO;
 import com.easy.result.Result;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Email;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 public interface UserService {
-    Result<PageResult<UserAdminVO>> page(UserPageQueryDTO userPageQueryDTO);
+    Result<PageResult> getAllUsers(UserPageQueryDTO userPageQueryDTO);
 
-    Result addUser(@Valid UserAddDTO userAddDTO);
-
-
-    Result updateUser(@Valid UserDTO userDTO);
+    Result addUser(UserDTO userDTO);
 
     Result updateUserStatus(Long userId, Integer userStatus);
 
@@ -25,27 +20,27 @@ public interface UserService {
 
     Result deleteUsers(List<Long> userIds);
 
-    Result loginByPassword(@Valid UserPasswordLoginDTO userLoginDTO);
+    String loginByPassword(UserPasswordLoginDTO userLoginDTO);
 
-    Result register(@Valid UserRegisterDTO userRegisterDTO);
+    void register(UserRegisterDTO userRegisterDTO);
 
-    Result sendVerificationCode(@Email String email,Integer operationType);
+    void sendVerificationCode(String email,Integer operationType);
 
-    Result logout();
+    void logout();
 
-    Result<UserVO> userInfo();
+    UserVO userInfo();
 
-    Result updateUserInfo(@Valid UserUpdateDTO updateDTO);
-
-
-    Result updateUserEmail(@Valid UserEmailUpdateDTO updateDTO);
-
-    Result updateUserPassword(UserResetPasswordDTO updateDTO);
-
-    Result loginByEmail(@Valid UserEmailLoginDTO userLoginDTO);
-
-    Result updateUserAvatar(MultipartFile avatar);
+    void updateUserInfo(@Valid UserDTO userDTO);
 
 
-    Result deleteAccount(String token);
+    void updateUserEmail(@Valid UserEmailUpdateDTO updateDTO);
+
+    void updateUserPassword(UserResetPasswordDTO updateDTO);
+
+    String loginByEmail(@Valid UserEmailLoginDTO userLoginDTO);
+
+    void updateUserAvatar(Long userId,MultipartFile avatar);
+
+
+    void deleteAccount(String token);
 }

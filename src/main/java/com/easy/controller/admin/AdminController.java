@@ -1,6 +1,7 @@
 package com.easy.controller.admin;
 
 
+import com.easy.annotation.LogOperation;
 import com.easy.pojo.dto.AdminDTO;
 import com.easy.pojo.dto.AdminUpdatePasswordDTO;
 import com.easy.result.Result;
@@ -16,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/admin")
-@Tag(name = "管理员相关接口")
+@Tag(name = "Admin端-管理员相关接口")
 @RequiredArgsConstructor
 public class AdminController {
     private final AdminService adminService;
@@ -41,7 +42,8 @@ public class AdminController {
     }
 
     @Operation(summary = "管理员修改密码接口")
-    @PostMapping("/updatePassword")
+    @PutMapping("/password")
+    @LogOperation
     public Result updatePassword(@RequestBody @Valid AdminUpdatePasswordDTO updatePasswordDTO, BindingResult bindingResult) {
         // 校验失败时，返回错误信息
         String errorMessage = BindingResultUtil.handleBindingResultErrors(bindingResult);

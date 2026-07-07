@@ -32,8 +32,4 @@ public class UserStatVO implements Serializable {
      */
     private Long fansCount;
 
-    /**
-     * 用户访客数
-     */
-    private Long visitorCount;
 }

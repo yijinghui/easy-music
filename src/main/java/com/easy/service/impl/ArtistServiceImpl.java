@@ -8,13 +8,14 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.easy.exception.BaseException;
 import com.easy.mapper.ArtistAuthMapper;
 import com.easy.mapper.ArtistMapper;
+import com.easy.mapper.SongMapper;
 import com.easy.mapper.UserMapper;
-import com.easy.pojo.dto.ArtistAddDTO;
 import com.easy.pojo.dto.ArtistPageQueryDTO;
-import com.easy.pojo.dto.ArtistUpdateDTO;
-import com.easy.pojo.dto.ArtistAuthDTO;
+import com.easy.pojo.dto.ArtistDTO;
+import com.easy.pojo.dto.SongDTO;
 import com.easy.pojo.entity.Artist;
 import com.easy.pojo.entity.ArtistAuth;
 import com.easy.pojo.entity.User;
@@ -22,14 +23,15 @@ import com.easy.pojo.vo.ArtistNameVO;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
 import com.easy.service.ArtistService;
-import com.easy.service.MinIOService;
+import com.easy.utils.ThreadLocalUtil;
+import com.minio.MinioTemplate;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -39,69 +41,58 @@ import java.util.List;
 @Tag(name = "Admin端-歌手管理接口")
 public class ArtistServiceImpl extends ServiceImpl<ArtistMapper, Artist> implements ArtistService {
 
-    private final MinIOService minIOService;
+    private final MinioTemplate minioTemplate;
 
     private final ArtistAuthMapper artistAuthMapper;
 
     private final UserMapper userMapper;
+    private final SongMapper songMapper;
+
 
     @Override
-    public Result<PageResult<Artist>> page(ArtistPageQueryDTO pageQueryDTO) {
+    public PageResult page(ArtistPageQueryDTO pageQueryDTO) {
+
         IPage<Artist> page = new Page<>(pageQueryDTO.getPageNum(), pageQueryDTO.getPageSize());
+
+        Long artistId = pageQueryDTO.getArtistId();
         String name = pageQueryDTO.getArtistName();
         Integer gender = pageQueryDTO.getGender();
         String area = pageQueryDTO.getArea();
+        Integer status = pageQueryDTO.getStatus();
 
         LambdaQueryWrapper<Artist> queryWrapper = new LambdaQueryWrapper<Artist>()
                 .like(StrUtil.isNotBlank(name), Artist::getArtistName, name)
+                .eq(artistId != null, Artist::getArtistId, artistId)
                 .eq(gender != null, Artist::getGender, gender)
-                .like(StrUtil.isNotBlank(area), Artist::getArea, area);
+                .eq(status != null, Artist::getStatus, status)
+                .eq(StrUtil.isNotBlank(area), Artist::getArea, area)
+                .orderByDesc(Artist::getArtistId);
 
-        IPage<Artist> result = baseMapper.selectPage(page, queryWrapper);
+        IPage<Artist> result = page(page, queryWrapper);
 
-        if (result.getTotal() == 0) {
-            return Result.success("未找到相关数据", new PageResult<>(0L, null));
-        }
-
-        return Result.success(new PageResult<>(result.getTotal(), result.getRecords()));
+        return new PageResult(result.getTotal(), result.getRecords());
     }
 
+
+
     @Override
-    public Result addArtist(ArtistAddDTO artistAddDTO) {
+    public Result addArtist(ArtistDTO artistDTO) {
         Artist artist = new Artist();
-        BeanUtil.copyProperties(artistAddDTO, artist);
-        artist.setCreateTime(LocalDateTime.now());
-        artist.setUpdateTime(LocalDateTime.now());
+        BeanUtil.copyProperties(artistDTO, artist);
         return baseMapper.insert(artist) > 0 ? Result.success("添加成功") : Result.error("添加失败");
     }
 
     @Override
-    public Result updateArtist(ArtistUpdateDTO artistUpdateDTO) {
-        Long id= artistUpdateDTO.getArtistId();
-        Artist artist = baseMapper.selectById(id);
-        if (artist == null) {
-            return Result.error("歌手不存在");
-        }
-        String artistName = artistUpdateDTO.getArtistName();
-        Integer gender = artistUpdateDTO.getGender();
-        LocalDate birth = artistUpdateDTO.getBirth();
-        String area = artistUpdateDTO.getArea();
-        String introduction = artistUpdateDTO.getIntroduction();
-        LambdaUpdateWrapper<Artist> updateWrapper = new LambdaUpdateWrapper<Artist>()
-                .eq(Artist::getArtistId, id)
-                .set(StrUtil.isNotBlank(artistName), Artist::getArtistName, artistName)
-                .set(gender != null, Artist::getGender, gender)
-                .set(birth != null, Artist::getBirth, birth)
-                .set(StrUtil.isNotBlank(area), Artist::getArea, area)
-                .set(StrUtil.isNotBlank(introduction), Artist::getIntroduction, introduction)
-                .set(Artist::getUpdateTime, LocalDateTime.now());
-        return baseMapper.update(null, updateWrapper) > 0 ? Result.success("更新成功") : Result.error("更新失败");
+    public Result updateArtist(ArtistDTO artistDTO) {
+        Artist artist = new Artist();
+        BeanUtil.copyProperties(artistDTO, artist);
+        return baseMapper.updateById(artist) > 0 ? Result.success("更新成功") : Result.error("更新失败");
     }
 
     @Override
     public Result updateArtistAvatar(Long artistId, MultipartFile avatar) {
         // 1.上传文件
-        String avatarUrl = minIOService.uploadFile(avatar, "artists");
+        String avatarUrl = minioTemplate.uploadFile(avatar, "artists");
 
         // 2，检查文件是否上传成功
         if (avatarUrl == null) {
@@ -128,7 +119,7 @@ public class ArtistServiceImpl extends ServiceImpl<ArtistMapper, Artist> impleme
         // 2.删除歌手头像
         String avatarUrl = artist.getAvatar();
         if (StrUtil.isNotBlank(avatarUrl)) {
-            minIOService.deleteFile(avatarUrl);
+            minioTemplate.deleteFile(avatarUrl);
         }
         // 3.删除歌手
         return baseMapper.deleteById(artistId) > 0 ? Result.success("删除成功") : Result.error("删除失败");
@@ -146,7 +137,7 @@ public class ArtistServiceImpl extends ServiceImpl<ArtistMapper, Artist> impleme
             // 删除歌手头像
             String avatarUrl = artist.getAvatar();
             if (StrUtil.isNotBlank(avatarUrl)) {
-                minIOService.deleteFile(avatarUrl);
+                minioTemplate.deleteFile(avatarUrl);
             }
         }
 
@@ -180,38 +171,33 @@ public class ArtistServiceImpl extends ServiceImpl<ArtistMapper, Artist> impleme
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    public Result artistAuth(ArtistAuthDTO artistAuthDTO) {
-        // 1.检查歌手是否存在
-        Artist artist = baseMapper.selectById(artistAuthDTO.getArtistId());
-        if (artist == null) {
-            return Result.error("歌手不存在");
-        }
-        // 2.检查歌手是否已经认证
-        if (artist.getUserId()!=null) {
-            return Result.error("歌手已经认证");
-        }
-
-        // 查询认证申请是否已取消
-        ArtistAuth artistAuth = artistAuthMapper.selectById(artistAuthDTO.getArtistId());
-        if (artistAuth == null || artistAuth.getStatus() == 2) {
-            return Result.error("歌手已经取消认证");
-        }
-        Long userId = artistAuthDTO.getUserId();
-        Integer status = artistAuthDTO.getStatus();
-        artistAuth.setAuditTime(LocalDateTime.now());
-        BeanUtil.copyProperties(artistAuthDTO, artistAuth);
-        if (status==0){
-            artistAuthMapper.updateById(artistAuth);
-        }else if (status==1){
-            baseMapper.updateById(artist.setUserId(userId));
-            artistAuthMapper.updateById(artistAuth);
-            userMapper.updateById(new User().setUserId(userId).setRole(1));
-        }
-
-        return status==0?Result.success("取消认证成功"):Result.success("认证成功");
+    public Result updateArtistInfo(ArtistDTO artistDTO) {
+        return null;
     }
 
+
+
+
+
+    @Transactional(rollbackFor = Exception.class)
+    public void certify(Long artistId) {
+        Long userId = ThreadLocalUtil.getUserId();
+
+        User user = userMapper.selectById(userId);
+
+        // 1.检查歌手是否已认证
+        if (user.getArtistId() != null) {
+            throw new BaseException("用户已认证");
+        }
+
+         ArtistAuth artistAuth = new ArtistAuth();
+         artistAuth.setUserId(userId);
+         artistAuth.setArtistId(artistId);
+         artistAuth.setStatus(0);
+         artistAuth.setCreateTime(LocalDateTime.now());
+         artistAuthMapper.insert(artistAuth);
+
+    }
 
 
 

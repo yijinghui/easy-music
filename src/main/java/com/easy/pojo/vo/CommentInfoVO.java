@@ -17,6 +17,21 @@ public class CommentInfoVO implements Serializable {
     private Long commentId;
 
     /**
+     * 根级评论id
+     */
+    private Long rootId;
+
+    /**
+     * 父级评论id
+     */
+    private Long parentId;
+
+    /**
+     * 发表评论的用户id
+     */
+    private Long userId;
+
+    /**
      * 发表评论的用户名
      */
     private String username;
@@ -41,5 +56,25 @@ public class CommentInfoVO implements Serializable {
      * 回复的用户的用户名
      */
     private String replyUsername;
+
+    /**
+     * 子评论个数
+     */
+    private Long childrenCount;
+
+    /**
+     * 点赞数
+     */
+    private Long likeCount;
+
+    /**
+     * 是否点过赞
+     */
+    private Boolean isLiked;
+
+    /**
+     * 是否是热评
+     */
+    private Integer isHot;
 
 }

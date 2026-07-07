@@ -1,11 +1,15 @@
 package com.easy.pojo.vo;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.checkerframework.checker.units.qual.N;
+import lombok.experimental.Accessors;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -36,34 +40,50 @@ public class PlaylistVO implements Serializable {
      */
     private String style;
 
+    /**
+     * 歌单封面
+     */
+    private String coverUrl;
 
     /**
-     * 所属用户名
+     * 歌单简介
+     */
+    private String introduction;
+
+    /**
+     * 创建用户ID
+     */
+    private Long userId;
+
+
+    /**
+     * 所属用户姓名
      */
     private String username;
 
-    /**
-     * 点赞数
-     */
-    private Long likeCount;
+
 
     /**
-     * 评论数
+     * 收藏数
      */
-    private Long commentCount;
+    private Long likeCount;
 
     /**
      * 播放次数
      */
     private Long playCount;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDateTime createTime;
 
+    /**
+     * 是否收藏
+     */
+    @TableField(exist = false)
+    private Boolean isFavorite;
 
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime updateTime;
 
 
 }

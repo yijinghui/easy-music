@@ -10,11 +10,8 @@ import com.easy.service.SignInService;
 import com.easy.utils.ThreadLocalUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.connection.BitFieldSubCommands;
-import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

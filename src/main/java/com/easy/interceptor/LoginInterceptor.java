@@ -1,13 +1,8 @@
 package com.easy.interceptor;
 
-
-import com.auth0.jwt.exceptions.JWTVerificationException;
-import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.easy.config.RolePermissionManager;
 import com.easy.constant.JwtClaimsConstant;
 import com.easy.constant.MessageConstant;
-import com.easy.enumeration.RoleEnum;
-import com.easy.utils.JwtUtil;
 import com.easy.utils.ThreadLocalUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -16,7 +11,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
@@ -88,12 +82,12 @@ public class LoginInterceptor implements HandlerInterceptor {
         }
 
         // 查看用户是否有权限访问该接口
-        String requestURI = request.getRequestURI();
+        /*String requestURI = request.getRequestURI();
         if (!RolePermissionManager.hasPermission(role, requestURI)){
             log.info("无权限访问该接口，返回信息：{}", MessageConstant.NO_PERMISSION);
             sendErrorResponse(response, 403, "无权限访问该接口");
             return false;
-        }
+        }*/
 
 
         return true;

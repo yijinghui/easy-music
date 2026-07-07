@@ -1,8 +1,8 @@
 package com.easy.pojo.dto;
 
-
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -14,22 +14,21 @@ public class CommentScrollQueryDTO implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 歌曲/歌单ID
-     */
-    private Long id;
-
-    /**
      * 根评论ID
      */
+    @NotNull(message = "根评论ID不能为空")
+    @Schema(description = "根评论ID",
+            requiredMode = Schema.RequiredMode.REQUIRED,
+            example = "1")
     private Long rootId;
 
     /**
-     * 最大时间戳
+     * 滚动分页查询的起始ID
      */
-    private Long maxTime;
+    @NotNull(message = "查询的起始ID不能为空")
+    @Schema(description = "滚动分页查询的起始ID（第一次查询传0或最大值，后续传上一页最后一条记录的ID）",
+            requiredMode = Schema.RequiredMode.REQUIRED,
+            example = "1")
+    private Long firstId;
 
-    /**
-     * 偏移量
-     */
-    private Integer offset;
 }

@@ -1,8 +1,7 @@
 package com.easy.controller.admin;
 
+import com.easy.annotation.LogOperation;
 import com.easy.pojo.dto.*;
-import com.easy.pojo.vo.PlaylistSongVO;
-import com.easy.pojo.vo.PlaylistVO;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
 import com.easy.service.PlaylistService;
@@ -16,15 +15,15 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
-@RequestMapping("/admin")
-@Tag(name = "歌单管理接口")
+@RequestMapping("/admin/playlists")
+@Tag(name = "Admin端-歌单管理接口")
 @RequiredArgsConstructor
 public class  PlaylistController {
 
     private final PlaylistService playlistService;
 
     @Operation(summary = "获取所有歌单数量接口")
-    @GetMapping("/getAllPlaylistsCount")
+    @GetMapping("/count")
     public Result<Long> getAllPlaylistsCount(
             @Parameter(description = "歌单风格", example = "null")
             @RequestParam(required = false) String style) {
@@ -33,31 +32,39 @@ public class  PlaylistController {
 
 
     @Operation(summary = "歌单分页查询接口")
-    @PostMapping("/getAllPlaylists")
-    public Result<PageResult<PlaylistVO>> getAllPlaylists(@RequestBody PlaylistPageQueryDTO pageQueryDTO) {
+    @PostMapping("/page")
+    public Result<PageResult> getAllPlaylists(@RequestBody PlaylistPageQueryDTO pageQueryDTO) {
         return playlistService.getAllPlaylists(pageQueryDTO);
     }
 
     @Operation(summary = "新增歌单接口")
-    @PostMapping("/addPlaylist")
-    public Result addPlaylist(@RequestBody PlaylistAddDTO playlistAddDTO) {
-        return playlistService.addPlaylist(playlistAddDTO);
+    @PostMapping("/create")
+    @LogOperation
+    public Result addPlaylist(@RequestBody PlaylistDTO playlistDTO) {
+        playlistService.create(playlistDTO);
+        return Result.success();
     }
 
     @Operation(summary = "批量新增歌单歌曲接口")
-    @PostMapping("/addPlaylistSongs")
-    public Result addPlaylistSongs(@RequestBody PlaylistSongAddDTO addDTO) {
-        return playlistService.addPlaylistSongs(addDTO);
+    @PostMapping("/songs/{playlistId}")
+    @LogOperation
+    public Result addPlaylistSongs(@PathVariable Long playlistId,@RequestParam List<Long> songIds) {
+        playlistService.addPlaylistSongs(playlistId,songIds);
+        return Result.success();
     }
 
+
+
     @Operation(summary = "更新歌单信息接口")
-    @PutMapping("/updatePlaylist")
-    public Result updatePlaylist(@RequestBody PlaylistUpdateDTO playlistUpdateDTO) {
-        return playlistService.updatePlaylist(playlistUpdateDTO);
+    @PutMapping("/update")
+    @LogOperation
+    public Result updatePlaylist(@RequestBody PlaylistDTO playlistDTO) {
+        return playlistService.updatePlaylist(playlistDTO);
     }
 
     @Operation(summary = "更新歌单封面接口")
-    @PatchMapping("/updatePlaylistCover/{id}")
+    @PatchMapping("/cover/{id}")
+    @LogOperation
     public Result updatePlaylistCover(@PathVariable("id") Long playlistId, @RequestParam("cover") MultipartFile cover) {
 
         return playlistService.updatePlaylistCover(playlistId, cover);
@@ -65,21 +72,26 @@ public class  PlaylistController {
 
 
     @Operation(summary = "删除歌单接口")
-    @DeleteMapping("/deletePlaylist/{id}")
+    @DeleteMapping("/{id}")
+    @LogOperation
     public Result deletePlaylist(@PathVariable("id") Long playlistId) {
         return playlistService.deletePlaylist(playlistId);
     }
 
     @Operation(summary = "批量删除歌单接口")
-    @DeleteMapping("/deletePlaylists")
+    @DeleteMapping("/batch")
+    @LogOperation
     public Result deletePlaylists(@RequestBody List<Long> playlistIds) {
         return playlistService.deletePlaylists(playlistIds);
     }
 
-    @Operation(summary = "获取歌单歌曲内容")
-    @PostMapping("/getPlaylistSongs")
-    public Result<PageResult<PlaylistSongVO>> getPlaylistSongs(@RequestBody PlaylistSongPageQueryDTO pageQueryDTO) {
-        return playlistService.getPlaylistSongs(pageQueryDTO);
+    @Operation(summary = "批量删除歌单接口")
+    @DeleteMapping("/songs/{id}")
+    @LogOperation
+    public Result deletePlaylistSongs(@PathVariable ("id") Long playlistId ,@RequestBody List<Long> songIds) {
+        return playlistService.deletePlaylistSongs(playlistId,songIds);
     }
+
+
 
 }

@@ -1,5 +1,6 @@
 package com.easy.controller.user;
 
+import com.easy.pojo.entity.Banner;
 import com.easy.pojo.vo.BannerVO;
 import com.easy.result.Result;
 import com.easy.service.BannerService;
@@ -14,7 +15,7 @@ import java.util.List;
 
 @Tag(name = "C端-轮播图接口")
 @RestController("userBannerController")
-@RequestMapping("/user/banner")
+@RequestMapping("/banner")
 @RequiredArgsConstructor
 public class BannerController {
 
@@ -22,7 +23,7 @@ public class BannerController {
 
     @Operation(summary = "获取轮播图列表接口")
     @GetMapping("/list")
-    public Result<List<BannerVO>> getBannerList() {
-        return bannerService.getBannerList();
+    public Result<List<Banner>> listActiveBanners() {
+        return Result.success(bannerService.listActiveBanners());
     }
 }

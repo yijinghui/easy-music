@@ -67,6 +67,7 @@ public class Playlist implements Serializable {
     @TableField("user_id")
     private Long userId;
 
+
     /**
      * 创建时间
      */
@@ -88,5 +89,18 @@ public class Playlist implements Serializable {
      */
     @TableField("play_count")
     private Long playCount;
+
+    /**
+     * 收藏次数
+     */
+    @TableField("like_count")
+    private Long likeCount;
+
+
+    /**
+     * 是否收藏
+     */
+    @TableField(exist = false)
+    private Boolean isFavorite;
 
 }

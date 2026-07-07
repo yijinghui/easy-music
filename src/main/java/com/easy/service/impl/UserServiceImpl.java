@@ -4,7 +4,6 @@ package com.easy.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import com.easy.enumeration.RoleEnum;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -12,7 +11,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.easy.constant.JwtClaimsConstant;
 import com.easy.constant.MessageConstant;
-import com.easy.enumeration.RoleEnum;
+import com.easy.exception.AccessDeniedException;
+import com.easy.exception.BaseException;
 import com.easy.mapper.UserMapper;
 import com.easy.pojo.dto.*;
 import com.easy.pojo.entity.User;
@@ -25,6 +25,7 @@ import com.easy.result.Result;
 import com.easy.service.*;
 import com.easy.utils.JwtUtil;
 import com.easy.utils.ThreadLocalUtil;
+import com.minio.MinioTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -47,19 +48,19 @@ import java.util.concurrent.TimeUnit;
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
 
-    private final MinIOService minIOService;
+    private final MinioTemplate minioTemplate;
 
     private final StringRedisTemplate stringRedisTemplate;
 
     private final EmailService emailService;
 
-    private final StatService statService;
+    private final StatisticService statService;
 
     private final PlaylistService playlistService;
 
 
     @Override
-    public Result<PageResult<UserAdminVO>> page(UserPageQueryDTO userPageQueryDTO) {
+    public Result<PageResult> getAllUsers(UserPageQueryDTO userPageQueryDTO) {
         Page<User> page = new Page<>(userPageQueryDTO.getPageNum(), userPageQueryDTO.getPageSize());
 
         String username = userPageQueryDTO.getUsername();
@@ -71,13 +72,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 .like(StrUtil.isNotBlank(username), User::getUsername, username)
                 .like(StrUtil.isNotBlank(phone), User::getPhone, phone)
                 .eq(userStatus != null, User::getUserStatus, userStatus)
-                .orderByDesc(User::getCreateTime);
+                .orderByDesc(User::getUserId);
         // 2.分页查询
         IPage<User> userPage = baseMapper.selectPage(page, queryWrapper);
 
         // 3.判断查询结果是否为空2
         if (userPage.getTotal() == 0){
-            return Result.success("未找到相关数据", new PageResult<>(0L, null));
+            return Result.success("未找到相关数据", new PageResult(0L, null));
         }
 
         // 4.将查询结果转换为VO
@@ -88,73 +89,50 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                     return userAdminVO;
                 }).toList();
         // 5.返回结果
-        return Result.success(new PageResult<>(userPage.getTotal(), userAdminVOList));
+        return Result.success(new PageResult(userPage.getTotal(), userAdminVOList));
 
 
     }
 
-    public Result addUser(UserAddDTO userAddDTO) {
+    public Result addUser(UserDTO userDTO) {
         // 1.构建查询条件
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("username", userAddDTO.getUsername())
+        queryWrapper.eq("username", userDTO.getUsername())
                 .or()
-                .eq("phone", userAddDTO.getPhone())
+                .eq("phone", userDTO.getPhone())
                 .or()
-                .eq("email", userAddDTO.getEmail());
+                .eq("email", userDTO.getEmail());
         // 2.查询用户信息
         List<User> userList = baseMapper.selectList(queryWrapper);
         // 3.判断用户信息是否已存在
         if (!userList.isEmpty()){
             for (User user : userList){
-                if (user.getUsername().equals(userAddDTO.getUsername())){
+                if (user.getUsername().equals(userDTO.getUsername())){
                     return Result.error("用户名已存在");
                 }
-                if (user.getPhone().equals(userAddDTO.getPhone())){
+                if (user.getPhone().equals(userDTO.getPhone())){
                     return Result.error("手机号已存在");
                 }
-                if (user.getEmail().equals(userAddDTO.getEmail())){
+                if (user.getEmail().equals(userDTO.getEmail())){
                     return Result.error("邮箱已存在");
                 }
             }
         }
         // 4.保存用户信息
-        String passwordMd5 = DigestUtils.md5DigestAsHex(userAddDTO.getPassword().getBytes());
+        String passwordMd5 = DigestUtils.md5DigestAsHex("Hh123456".getBytes());
         User newUser = new User();
-        BeanUtil.copyProperties(userAddDTO, newUser);
+        BeanUtil.copyProperties(userDTO, newUser);
         newUser.setPassword(passwordMd5);
-        newUser.setCreateTime(LocalDateTime.now());
-        newUser.setUpdateTime(LocalDateTime.now());
+        newUser.setUserStatus(1);
         int result = baseMapper.insert(newUser);
 
         if (result == 0){
             return Result.error("用户添加失败");
         }
         // 5.返回结果
-        return Result.success("用户添加成功");
+        return Result.success("已添加用户"+userDTO.getUsername());
     }
 
-    @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
-    public Result updateUser(UserDTO userDTO) {
-        Long id = userDTO.getUserId();
-        if (id == null){
-            return Result.error("用户ID不能为空");
-        }
-
-        User user = baseMapper.selectById(id);
-        if (user == null){
-            return Result.error("用户不存在");
-        }
-        User newUser = new User();
-        BeanUtils.copyProperties(userDTO, newUser);
-        newUser.setUserId(id);
-        newUser.setUpdateTime(LocalDateTime.now());
-        int result = baseMapper.updateById(newUser);
-        if (result == 0){
-            return Result.error("用户更新失败");
-        }
-
-        return Result.success("用户更新成功");
-    }
 
     public Result updateUserStatus(Long userId, Integer userStatus) {
         User user = baseMapper.selectById(userId);
@@ -180,17 +158,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 删除用户头像
         String avatar = user.getUserAvatar();
         if (StrUtil.isNotBlank(avatar)) {
-            minIOService.deleteFile(avatar);
+            minioTemplate.deleteFile(avatar);
         }
 
-        return Result.success(baseMapper.deleteById(userId) == 1 ? "用户删除成功" : "用户删除失败");
+        return Result.success(baseMapper.deleteById(userId) == 1 ? "已删除用户"+user.getUsername() : "用户删除失败");
     }
 
     @Transactional(rollbackFor = Exception.class)
     public Result deleteUsers(List<Long> userIds) {
         // 批量查询用户
         List<User> userList = baseMapper.selectByIds(userIds);
-
+        List<String> userNames = userList.stream().map(User::getUsername).toList();
         List<Long> userIdList = userList.stream().map(User::getUserId).toList();
 
         if(userList.isEmpty()){
@@ -200,7 +178,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 删除用户头像
         for (User user : userList) {
             if (StrUtil.isNotBlank(user.getUserAvatar())) {
-                minIOService.deleteFile(user.getUserAvatar());
+                minioTemplate.deleteFile(user.getUserAvatar());
             }
         }
 
@@ -209,100 +187,86 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
 
 
-        return Result.success("删除成功，已删除用户"+userIdList);
+        return Result.success("已删除用户"+userNames);
     }
 
     @Override
-    public Result loginByPassword(UserPasswordLoginDTO userLoginDTO) {
+    public String loginByPassword(UserPasswordLoginDTO userLoginDTO) {
         // 根据用户名查询用户信息
-        User user = baseMapper.selectOne(new QueryWrapper<User>().eq("username", userLoginDTO.getUsername()));
-
-        if (user == null){
-            return Result.error("用户不存在");
-        }
+        User user = getOne(new QueryWrapper<User>().eq("username", userLoginDTO.getUsername()));
 
         if (user.getUserStatus() == 0){
-            return Result.error("用户已被禁用");
-        }
-
-        if (!user.getPassword().equals(DigestUtils.md5DigestAsHex(userLoginDTO.getPassword().getBytes()))){
-            return Result.error("密码错误");
-        }
-
-        Integer role= user.getRole();
-        Long userId = user.getUserId();
-        // 4.1.生成Jwt令牌
-        Map<String, Object> claims = new HashMap<>();
-        claims.put(JwtClaimsConstant.ROLE, (role==0?RoleEnum.USER:RoleEnum.ADMIN).getRole());
-        claims.put(JwtClaimsConstant.USER_ID, userId);
-        claims.put(JwtClaimsConstant.USERNAME, user.getUsername());
-        String token = JwtUtil.generateToken(claims);
-        // 4.2.将token存入Redis
-        stringRedisTemplate.opsForValue().set("login:"+RoleEnum.USER.getRole()+":" + userId, token, 10, TimeUnit.HOURS);
-
-        // 5.返回结果
-        return Result.success("登录成功", token);
-
-    }
-
-    @Override
-    public Result loginByEmail(UserEmailLoginDTO userLoginDTO) {
-
-        String email = userLoginDTO.getEmail();
-
-        User user = baseMapper.selectOne(new QueryWrapper<User>().eq("email", email));
-
-        if (user == null){
-            return Result.error("用户不存在");
-        }
-
-        if (user.getUserStatus() == 0){
-            return Result.error("用户已被禁用");
-        }
-
-        String code=stringRedisTemplate.opsForValue().get("verificationCode:login:" + email);
-        if(code==null){
-            return Result.error("验证码已过期");
-        }
-        if(!code.equals(userLoginDTO.getVerificationCode())){
-            return Result.error("验证码错误");
+            throw new AccessDeniedException("账号已被冻结");
         }
 
         Long userId = user.getUserId();
         // 4.1.生成Jwt令牌
         Map<String, Object> claims = new HashMap<>();
         claims.put(JwtClaimsConstant.ROLE, RoleEnum.USER.getRole());
-        claims.put(JwtClaimsConstant.USER_ID,userId);
+        claims.put(JwtClaimsConstant.USER_ID, userId);
         claims.put(JwtClaimsConstant.USERNAME, user.getUsername());
         String token = JwtUtil.generateToken(claims);
         // 4.2.将token存入Redis
-        stringRedisTemplate.opsForValue().set("login:"+RoleEnum.USER.getRole()+":" + userId + userId, token, 10, TimeUnit.HOURS);
+        stringRedisTemplate.opsForValue().set("login:"+RoleEnum.USER.getRole()+":" + userId, token, 3, TimeUnit.HOURS);
 
         // 5.返回结果
-        return Result.success("登录成功", token);
+        return token;
+
+    }
+
+    @Override
+    public String loginByEmail(UserEmailLoginDTO userLoginDTO) {
+
+        String email = userLoginDTO.getEmail();
+
+        User user = getOne(new QueryWrapper<User>().eq("email", email));
+
+        if (user.getUserStatus() == 0){
+            throw new AccessDeniedException("账号已被冻结");
+        }
+
+        String code=stringRedisTemplate.opsForValue().get("verificationCode:login:" + email);
+        if(code==null){
+            throw new AccessDeniedException("验证码已过期");
+        }
+        if(!code.equals(userLoginDTO.getVerificationCode())){
+            throw new AccessDeniedException("验证码错误");
+        }
+
+        Long userId = user.getUserId();
+        // 4.1.生成Jwt令牌
+        Map<String, Object> claims = new HashMap<>();
+        claims.put(JwtClaimsConstant.ROLE, RoleEnum.USER.getRole());
+        claims.put(JwtClaimsConstant.USER_ID, userId);
+        claims.put(JwtClaimsConstant.USERNAME, user.getUsername());
+        String token = JwtUtil.generateToken(claims);
+        // 4.2.将token存入Redis
+        stringRedisTemplate.opsForValue().set("login:user:" + userId, token, 3, TimeUnit.HOURS);
+
+        // 5.返回结果
+        return token;
     }
 
 
     @Transactional(rollbackFor = Exception.class)
-    public Result register(UserRegisterDTO userRegisterDTO) {
+    public void register(UserRegisterDTO userRegisterDTO) {
 
         String email = userRegisterDTO.getEmail();
 
         // 1.校验验证码
         String code = stringRedisTemplate.opsForValue().get("verificationCode:register:" + email);
 
-        if (code == null){
-            return Result.error("验证码已过期");
+        if(code==null){
+            throw new AccessDeniedException("验证码已过期");
+        }
+        if(!code.equals(userRegisterDTO.getVerificationCode())){
+            throw new AccessDeniedException("验证码错误");
         }
 
-        if (!code.equals(userRegisterDTO.getVerificationCode())){
-            return Result.error("验证码错误");
-        }
-
-        User user = baseMapper.selectOne(new QueryWrapper<User>().eq("email", email));
+        User user = getOne(new QueryWrapper<User>().eq("email", email));
 
         if (user != null){
-            return Result.error("邮箱已存在");
+            throw new AccessDeniedException("邮箱已存在");
         }
 
         user = new User();
@@ -310,23 +274,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setUsername(userRegisterDTO.getUsername());
         user.setPassword(DigestUtils.md5DigestAsHex(userRegisterDTO.getPassword().getBytes()));
         user.setUserStatus(1);
-        user.setCreateTime(LocalDateTime.now());
-        user.setUpdateTime(LocalDateTime.now());
-        int result = baseMapper.insert(user);
-        if (result == 0){
-            return Result.error("用户注册失败");
-        }
-        return Result.success("用户注册成功");
+        save(user);
 
 
     }
 
     @Override
-    public Result sendVerificationCode(String email,Integer operationType) {
+    public void sendVerificationCode(String email,Integer operationType) {
 
         String verificationCode = emailService.sendVerificationCodeEmail(email);
         if (verificationCode == null) {
-            return Result.error(MessageConstant.EMAIL_SEND_FAILED);
+            throw new RuntimeException("发送验证码失败");
         }
         if (operationType == 1){
             stringRedisTemplate.opsForValue().set("verificationCode:register:" + email, verificationCode, 5, TimeUnit.MINUTES);
@@ -341,33 +299,23 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             stringRedisTemplate.opsForValue().set("verificationCode:updatePassword:" + email, verificationCode, 5, TimeUnit.MINUTES);
         }
 
-        return Result.success(MessageConstant.EMAIL_SEND_SUCCESS);
     }
 
     @Override
-    public Result logout() {
-
-
+    public void logout() {
         Long userId = ThreadLocalUtil.getUserId();
-
         Boolean delete = stringRedisTemplate.delete("login:"+RoleEnum.USER.getRole()+":" + userId);
-
         if (!delete){
-            return Result.error("用户未登录");
+            throw new RuntimeException("用户未登录");
         }
-
-        return Result.success("退出登录成功");
-
     }
 
     @Override
     @Cacheable(cacheNames = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
-    public Result<UserVO> userInfo() {
-
+    public UserVO userInfo() {
         Long userId = ThreadLocalUtil.getUserId();
 
-
-        User user = baseMapper.selectById(userId);
+        User user = getById(userId);
         UserVO userVO = new UserVO();
 
         BeanUtils.copyProperties(user, userVO);
@@ -377,162 +325,130 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         BeanUtils.copyProperties(userStatVO, userVO);
 
-        // 获取歌单的基本信息
-        List<PlaylistInfoVO> playlistInfoVOList = playlistService.getPlaylistInfo(userId);
-        userVO.setSongListVOList(playlistInfoVOList);
-
-
-
-        return Result.success(userVO);
+        return userVO;
     }
 
     @Override
     @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
-    public Result updateUserInfo(UserUpdateDTO updateDTO) {
+    public void updateUserInfo(UserDTO userDTO) {
 
         Long userId =ThreadLocalUtil.getUserId();
 
-        updateDTO.setUserId(userId);
+        userDTO.setUserId(userId);
 
-        // 查询用户是否存在
-        User user = baseMapper.selectById(userId);
-        if (user == null){
-            return Result.error("用户不存在");
+        User user = getById(userId);
+
+        String username = userDTO.getUsername();
+        String phone = userDTO.getPhone();
+
+        if (baseMapper.selectCount(new QueryWrapper<User>().eq("username",username))>0&&!user.getUsername().equals(username)){
+            throw new BaseException("用户名已存在");
         }
 
-        String username = updateDTO.getUsername();
-        String phone = updateDTO.getPhone();
-
-
-        if (baseMapper.selectCount(new QueryWrapper<User>().eq("username",username))>0){
-            return Result.error("用户名已存在");
+        if (baseMapper.selectCount(new QueryWrapper<User>().eq("phone",phone))>0&&!user.getPhone().equals(phone)){
+            throw new BaseException("手机号已存在");
         }
 
-        if (baseMapper.selectCount(new QueryWrapper<User>().eq("phone",phone))>0){
-            return Result.error("手机号已存在");
-        }
-
-        BeanUtil.copyProperties(updateDTO, user);
+        BeanUtil.copyProperties(userDTO, user);
 
         user.setUpdateTime(LocalDateTime.now());
-        int result = baseMapper.updateById(user);
-        if (result == 0){
-            return Result.error("邮箱修改失败");
-        }
-        return Result.success("邮箱修改成功");
-
+        updateById(user);
     }
 
     @Override
-    public Result updateUserPassword(UserResetPasswordDTO userResetPasswordDTO) {
-
-
+    public void updateUserPassword(UserResetPasswordDTO userResetPasswordDTO) {
         // Redis中查询验证码是否合法
         String code = stringRedisTemplate.opsForValue().get("verificationCode:updatePassword:" + userResetPasswordDTO.getEmail());
 
 
-        if (code == null){
-            return Result.error("验证码已过期");
+        if(code==null){
+            throw new AccessDeniedException("验证码已过期");
         }
-
-        if (!code.equals(userResetPasswordDTO.getVerificationCode())){
-            return Result.error("验证码错误");
+        if(!code.equals(userResetPasswordDTO.getVerificationCode())){
+            throw new AccessDeniedException("验证码错误");
         }
 
         String email = userResetPasswordDTO.getEmail();
         User user = baseMapper.selectOne(new QueryWrapper<User>().eq("email", email));
-        if (user == null){
-            return Result.error("用户不存在");
-        }
 
         Long userId = user.getUserId();
         String newPassword = userResetPasswordDTO.getNewPassword();
         String repeatPassword = userResetPasswordDTO.getRepeatPassword();
         if (!newPassword.equals(repeatPassword)){
-            return Result.error("两次密码不一致");
+            throw new AccessDeniedException("两次密码不一致");
         }
-
 
         user.setPassword(DigestUtils.md5DigestAsHex(userResetPasswordDTO.getNewPassword().getBytes()));
         user.setUpdateTime(LocalDateTime.now());
-        int result = baseMapper.updateById(user);
-        if (result == 0){
-            return Result.error("密码重置失败");
-        }
+        baseMapper.updateById(user);
+
         // 删除Redis中的token
         stringRedisTemplate.delete("login:user:" + userId);
-        return Result.success("密码重置成功");
     }
 
 
     @Override
-    public Result updateUserEmail(UserEmailUpdateDTO updateDTO) {
+    public void updateUserEmail(UserEmailUpdateDTO updateDTO) {
         Long userId = ThreadLocalUtil.getUserId();
 
         String newEmail = updateDTO.getNewEmail();
 
         if (baseMapper.selectCount(new QueryWrapper<User>().eq("email",newEmail))>0){
-            return Result.error("邮箱已存在");
+            throw new BaseException("邮箱已存在");
         }
 
         // Redis中查询验证码是否合法
         String code = stringRedisTemplate.opsForValue().get("verificationCode:updateEmail:" + newEmail);
 
-        if (code == null){
-            return Result.error("验证码已过期");
+        if(code==null){
+            throw new AccessDeniedException("验证码已过期");
+        }
+        if(!code.equals(updateDTO.getVerificationCode())){
+            throw new AccessDeniedException("验证码错误");
         }
 
-        if (!code.equals(updateDTO.getVerificationCode())){
-            return Result.error("验证码错误");
+        User user = getById(userId);
+
+        if (newEmail.equals(user.getEmail())){
+            throw new AccessDeniedException("新邮箱不能与旧邮箱相同");
         }
-
-        User user = baseMapper.selectById(userId);
-        if (user == null){return Result.error("用户不存在");}
-
-        if (newEmail.equals(user.getEmail())){return Result.error("新邮箱不能与旧邮箱相同");}
 
         user.setEmail(newEmail);
         user.setUpdateTime(LocalDateTime.now());
-        if (baseMapper.updateById(user) == 0){
-            return Result.error("用户更新失败");
-        }
-        return Result.success("用户更新成功");
+        updateById(user);
+
     }
 
 
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
-    public Result updateUserAvatar(MultipartFile avatar) {
-        String avatarUrl = minIOService.uploadFile(avatar, "users");
-
-        Long userId = ThreadLocalUtil.getUserId();
-
-        User user = baseMapper.selectById(userId);
-        if (user == null){
-            return Result.error("用户不存在");
+    public void updateUserAvatar(Long userId,MultipartFile avatar) {
+        if (userId==null){
+            userId = ThreadLocalUtil.getUserId();
         }
+        String avatarUrl = minioTemplate.uploadFile(avatar, "users");
+
+        User user = getById(userId);
         user.setUserAvatar(avatarUrl);
         user.setUpdateTime(LocalDateTime.now());
-        if (baseMapper.updateById(user) == 0){
-            return Result.error("头像更新失败");
-        }
-        return Result.success("头像更新成功");
+        updateById(user);
     }
 
 
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
-    public Result deleteAccount(String token) {
+    public void deleteAccount(String token) {
         Long userId = ThreadLocalUtil.getUserId();
 
         stringRedisTemplate.delete("login:user:" + userId);
 
-        User user = baseMapper.selectById(userId);
+        User user = getById(userId);
 
         // 删除头像
-        minIOService.deleteFile(user.getUserAvatar());
+        minioTemplate.deleteFile(user.getUserAvatar());
 
-        return baseMapper.deleteById(userId) == 0 ? Result.error("注销失败") : Result.success("注销成功");
+        removeById(userId);
+
     }
 
 }

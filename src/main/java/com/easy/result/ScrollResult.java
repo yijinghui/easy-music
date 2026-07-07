@@ -1,13 +1,17 @@
 package com.easy.result;
 
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.util.List;
 
 @Data
-public class ScrollResult<T> {
-    private List<T> list; // 结果集
-    private Integer offset; // 下一页偏移量（针对与最小时间戳时间戳相同的情况，跳过以防止ZSORTEDSET重复查询）
-    private String minTime; // 下一页最小时间戳
+@AllArgsConstructor
+@NoArgsConstructor
+public class ScrollResult implements Serializable {
+    private List list; // 结果集
+    private Long lastId; // 用于数据库查询，衔接redis滚动分页
 }

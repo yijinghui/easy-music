@@ -34,7 +34,7 @@ public class Comment implements Serializable {
      * 评论 id
      */
     @TableId(value = "id", type = IdType.AUTO)
-    private Long commentId;
+    private Long id;
 
     /**
      * 用户 id
@@ -63,7 +63,7 @@ public class Comment implements Serializable {
     /**
      * 评论时间
      */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSS")
     @TableField("create_time")
     private LocalDateTime createTime;
 
@@ -84,5 +84,11 @@ public class Comment implements Serializable {
      */
     @TableField("parent_id")
     private Long parentId;
+
+    @TableField("root_id")
+    private Long rootId;
+
+    @TableField("is_hot")
+    private Integer isHot;
 
 }

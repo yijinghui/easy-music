@@ -1,23 +1,27 @@
 package com.easy.service;
 
-import com.easy.pojo.dto.SongAddDTO;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.easy.pojo.dto.PageQueryDTO;
+import com.easy.pojo.dto.SongDTO;
 import com.easy.pojo.dto.SongPageQueryDTO;
-import com.easy.pojo.dto.SongUpdateDTO;
-import com.easy.pojo.vo.SongAdminVO;
+import com.easy.pojo.entity.Song;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
-public interface SongService {
+public interface SongService extends IService<Song> {
     Result<Long> getAllSongsCount(String style);
 
-    Result<PageResult<SongAdminVO>> getAllSongs(SongPageQueryDTO pageQueryDTO);
+    Result<PageResult> getAllSongs(SongPageQueryDTO pageQueryDTO);
 
-    Result addSong(SongAddDTO songAddDTO);
+    Result addSong(SongDTO songDTO);
 
-    Result updateSong(SongUpdateDTO songUpdateDTO);
+    Result updateSong(SongDTO songDTO);
 
     Result updateSongCover(Long songId, MultipartFile cover);
 
@@ -26,4 +30,18 @@ public interface SongService {
     Result deleteSong(Long songId);
 
     Result deleteSongs(List<Long> songIds);
+
+    List<Song> getRecommendedSongs();
+
+    List<Song> getTop200SongsByMonth(Integer offset);
+
+    List<Song> getTop200SongsByWeek(Integer offset);
+
+    void listen(Long songId, Long playListId);
+
+    PageResult search(String text) throws IOException;
+
+    void add(@Valid SongDTO songDTO);
+
+    PageResult listSongByPlaylistId(@NotBlank Long playlistId, PageQueryDTO pageQueryDTO);
 }

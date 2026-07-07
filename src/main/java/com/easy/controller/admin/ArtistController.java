@@ -1,11 +1,9 @@
 package com.easy.controller.admin;
 
 
-import com.easy.pojo.dto.ArtistAddDTO;
+import com.easy.annotation.LogOperation;
 import com.easy.pojo.dto.ArtistPageQueryDTO;
-import com.easy.pojo.dto.ArtistUpdateDTO;
-import com.easy.pojo.dto.ArtistAuthDTO;
-import com.easy.pojo.entity.Artist;
+import com.easy.pojo.dto.ArtistDTO;
 import com.easy.pojo.vo.ArtistNameVO;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
@@ -20,66 +18,69 @@ import java.util.List;
 
 
 @RestController
-@RequestMapping("/admin")
+@RequestMapping("/admin/artists")
 @Tag(name = "Admin端-歌手管理接口")
 @RequiredArgsConstructor
 public class ArtistController {
 
     private final ArtistService artistService;
     @Operation(summary = "歌手分页查询接口")
-    @PostMapping("/getAllArtists")
-    public Result<PageResult<Artist>> page(@RequestBody ArtistPageQueryDTO pageQueryDTO) {
-        return artistService.page(pageQueryDTO);
+    @PostMapping("/page")
+    public Result<PageResult> getAllArtists(@RequestBody ArtistPageQueryDTO pageQueryDTO) {
+        return Result.success(artistService.page(pageQueryDTO));
     }
 
     @Operation(summary = "歌手添加接口")
-    @PostMapping("/addArtist")
-    public Result addArtist(@RequestBody ArtistAddDTO artistAddDTO) {
-        return artistService.addArtist(artistAddDTO);
+    @PostMapping("/create")
+    @LogOperation
+    public Result addArtist(@RequestBody ArtistDTO artistDTO) {
+        return artistService.addArtist(artistDTO);
     }
 
     @Operation(summary = "更新歌手信息接口")
-    @PutMapping("/updateArtist")
-    public Result updateArtist(@RequestBody ArtistUpdateDTO artistUpdateDTO) {
-        return artistService.updateArtist(artistUpdateDTO);
+    @PutMapping("/update")
+    @LogOperation
+    public Result updateArtist(@RequestBody ArtistDTO artistDTO) {
+        return artistService.updateArtist(artistDTO);
     }
 
     @Operation(summary = "更新歌手头像接口")
-    @PatchMapping("/updateArtistAvatar/{id}")
+    @LogOperation
+    @PatchMapping("/avatar{id}")
     public Result updateArtistAvatar(@PathVariable("id") Long artistId, @RequestParam("avatar") MultipartFile avatar) {
         return artistService.updateArtistAvatar(artistId, avatar);
     }
 
     @Operation(summary = "删除歌手接口")
-    @DeleteMapping("/deleteArtist/{id}")
+    @DeleteMapping("/{id}")
+    @LogOperation
     public Result deleteArtist(@PathVariable("id") Long artistId) {
         return artistService.deleteArtist(artistId);
     }
 
 
     @Operation(summary = "批量删除歌手接口")
-    @DeleteMapping("/deleteArtists")
+    @DeleteMapping("/batch")
+    @LogOperation
     public Result deleteArtists(@RequestBody List<Long> artistIds) {
         return artistService.deleteArtists(artistIds);
     }
 
     @Operation(summary = "获取所有歌手数量接口")
-    @GetMapping("/getAllArtistsCount")
+    @GetMapping("/count")
     public Result<Long> getAllArtistsCount(@RequestParam(required = false) Integer gender, @RequestParam(required = false) String area) {
         return artistService.getAllArtistsCount(gender, area);
     }
 
     @Operation(summary = "获取所有歌手id和名称接口")
-    @GetMapping("/getAllArtistNames")
+    @GetMapping("/names")
     public Result<List<ArtistNameVO>> getAllArtistNames() {
         return artistService.getAllArtistNames();
     }
 
-    @Operation(summary = "歌手认证审核接口")
-    @PostMapping("/artistAuth")
-    public Result artistAuth(@RequestBody ArtistAuthDTO artistAuthDTO) {
-        return artistService.artistAuth(artistAuthDTO);
-    }
+
+
+
 
 
 

@@ -16,6 +16,10 @@ public class CommentVO implements Serializable {
 
     private Long commentId;
 
+    private Long rootId;
+
+    private Long parentId;
+
     /**
      * 发表评论的用户名
      */
@@ -52,4 +56,9 @@ public class CommentVO implements Serializable {
      * 是否点赞
      */
     private Boolean isLike;
+
+    /**
+     * 是否有子评论
+     */
+    private Integer hasChildren;
 }

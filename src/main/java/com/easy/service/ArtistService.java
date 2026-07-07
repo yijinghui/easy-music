@@ -1,23 +1,25 @@
 package com.easy.service;
 
-import com.easy.pojo.dto.ArtistAddDTO;
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.easy.pojo.dto.ArtistPageQueryDTO;
-import com.easy.pojo.dto.ArtistUpdateDTO;
-import com.easy.pojo.dto.ArtistAuthDTO;
+import com.easy.pojo.dto.ArtistDTO;
+import com.easy.pojo.dto.SongDTO;
 import com.easy.pojo.entity.Artist;
 import com.easy.pojo.vo.ArtistNameVO;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
+import jakarta.validation.Valid;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
-public interface ArtistService {
-    Result<PageResult<Artist>> page(ArtistPageQueryDTO pageQueryDTO);
+public interface ArtistService extends IService<Artist> {
+    PageResult page(@Valid ArtistPageQueryDTO pageQueryDTO);
 
-    Result addArtist(ArtistAddDTO artistAddDTO);
 
-    Result updateArtist(ArtistUpdateDTO artistUpdateDTO);
+    Result addArtist(ArtistDTO artistDTO);
+
+    Result updateArtist(ArtistDTO artistDTO);
 
     Result updateArtistAvatar(Long artistId, MultipartFile avatar);
 
@@ -30,5 +32,14 @@ public interface ArtistService {
     Result<List<ArtistNameVO>> getAllArtistNames();
 
 
-    Result artistAuth(ArtistAuthDTO artistAuthDTO);
+
+    /**
+     * 用户端更新歌手信息（需要验证权限）
+     */
+    Result updateArtistInfo(ArtistDTO artistDTO);
+
+
+    void certify(Long artistId);
+
+
 }

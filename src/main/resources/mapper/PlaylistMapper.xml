@@ -7,17 +7,23 @@
             p.id as playlistId,
             p.title as title,
             p.style as style,
+            p.cover_url as coverUrl,
+            p.introduction as introduction,
             p.play_count as playCount,
             p.create_time as createTime,
             p.update_time as updateTime,
-            u.username as username,
+            p.user_id as userId,
             <!-- 子查询获取点赞数 -->
-            (select count(*) from tb_playlist_like pl where pl.playlist_id = p.id) as likeCount,
+            (select count(*) from tb_user_favorite uf where uf.playlist_id = p.id) as likeCount,
             <!-- 子查询获取评论数 -->
-            (select count(*) from tb_playlist_comment pc where pc.playlist_id = p.id) as commentCount
+            (select count(*) from tb_comment c where c.playlist_id = p.id) as commentCount
         from tb_playlist p
         left join tb_user u on p.user_id = u.id
         <where>
+            <if test="dto.playlistId != null and dto.playlistId !=''">
+                and p.id=#{dto.playlistId}
+            </if>
+
         <if test="dto.title != null and dto.title !=''">
             and p.title like concat('%',#{dto.title},'%')
         </if>
@@ -28,9 +34,26 @@
             and p.user_id = #{dto.userId}
         </if>
         </where>
-        <if test="dto.orderBy != null and dto.orderBy!=''">
-            order by ${dto.orderBy} ${dto.sortRule}
-        </if>
+    </select>
+    <select id="getUserFavoritePlaylists" resultType="com.easy.pojo.vo.PlaylistVO">
+        SELECT
+            p.id AS playlistId,
+            p.title AS title,
+            p.style AS style,
+            p.cover_url AS coverUrl,
+            p.introduction AS introduction,
+            p.user_id AS userId,
+            p.play_count AS playCount,
+            p.create_time AS createTime,
+            p.update_time AS updateTime,
+            u.username AS username,
+            p.like_count AS likeCount
+        FROM tb_user_favorite uf
+        INNER JOIN tb_playlist p ON uf.playlist_id = p.id
+        LEFT JOIN tb_user u ON p.user_id = u.id
+        WHERE uf.user_id = #{userId}
+          AND uf.type = 1
+        ORDER BY uf.create_time DESC
     </select>
     <select id="selectPlaylistInfo" resultType="com.easy.pojo.vo.PlaylistInfoVO">
         select

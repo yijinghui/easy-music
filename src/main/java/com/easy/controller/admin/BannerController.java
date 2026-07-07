@@ -1,9 +1,7 @@
 package com.easy.controller.admin;
 
 
-import com.easy.pojo.dto.BannerDTO;
-import com.easy.pojo.entity.Banner;
-import com.easy.pojo.vo.BannerVO;
+import com.easy.annotation.LogOperation;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
 import com.easy.service.BannerService;
@@ -17,13 +15,12 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 
-@RestController
+@RequestMapping("/admin/banners")
 @Tag(name = "Admin端-轮播图相关接口")
 @RequiredArgsConstructor
 public class BannerController {
 
-    @Autowired
-    private BannerService bannerService;
+    private final BannerService bannerService;
 
     /**
      * 获取轮播图列表
@@ -31,9 +28,9 @@ public class BannerController {
      * @return 轮播图列表
      */
     @Operation(summary = "获取所有轮播图接口")
-    @PostMapping("/admin/getAllBanners")
-    public Result<PageResult<Banner>> getAllBanners(@RequestBody BannerDTO bannerDTO) {
-        return bannerService.getAllBanners(bannerDTO);
+    @GetMapping("/list")
+    public Result<PageResult> getAllBanners() {
+        return bannerService.getAllBanners(null);
     }
 
     /**
@@ -43,7 +40,8 @@ public class BannerController {
      * @return 结果
      */
     @Operation(summary = "添加轮播图接口")
-    @PostMapping("/admin/addBanner")
+    @PostMapping
+    @LogOperation
     public Result addBanner(@RequestParam("banner") MultipartFile banner) {
         return bannerService.addBanner(banner);
     }
@@ -55,7 +53,8 @@ public class BannerController {
      * @return 结果
      */
     @Operation(summary = "更新轮播图接口")
-    @PatchMapping("/admin/updateBanner/{id}")
+    @PatchMapping("/{id}")
+    @LogOperation
     public Result updateBanner(@PathVariable("id") Long bannerId, @RequestParam("banner") MultipartFile banner) {
         return bannerService.updateBanner(bannerId, banner);
     }
@@ -67,7 +66,8 @@ public class BannerController {
      * @return 结果
      */
     @Operation(summary = "更新轮播图状态接口")
-    @PatchMapping("/admin/updateBannerStatus/{id}")
+    @PatchMapping("/status/{id}")
+    @LogOperation
     public Result updateBannerStatus(@PathVariable("id") Long bannerId, @RequestParam("status") Integer bannerStatus) {
         return bannerService.updateBannerStatus(bannerId, bannerStatus);
     }
@@ -79,7 +79,8 @@ public class BannerController {
      * @return 结果
      */
     @Operation(summary = "删除轮播图接口")
-    @DeleteMapping("/admin/deleteBanner/{id}")
+    @DeleteMapping("/{id}")
+    @LogOperation
     public Result deleteBanner(@PathVariable("id") Long bannerId) {
         return bannerService.deleteBanner(bannerId);
     }
@@ -91,7 +92,8 @@ public class BannerController {
      * @return 结果
      */
     @Operation(summary = "批量删除轮播图接口")
-    @DeleteMapping("/admin/deleteBanners")
+    @DeleteMapping("/batch")
+    @LogOperation
     public Result deleteBanners(@RequestBody List<Long> bannerIds) {
         return bannerService.deleteBanners(bannerIds);
     }

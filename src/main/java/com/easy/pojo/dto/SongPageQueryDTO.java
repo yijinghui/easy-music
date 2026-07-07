@@ -25,9 +25,20 @@ public class SongPageQueryDTO implements Serializable {
     private Integer pageSize;
 
     /**
+     * id
+     */
+    private Long id;
+
+    /**
      * 歌手
      */
     private Long artistId;
+
+    /**
+     * 歌曲类型
+     */
+    private String style;
+
 
     /**
      * 歌曲名
@@ -38,5 +49,9 @@ public class SongPageQueryDTO implements Serializable {
      * 专辑
      */
     private String album;
+
+    /**
+     * 风格
+     */
 
 }

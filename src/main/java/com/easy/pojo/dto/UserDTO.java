@@ -1,6 +1,7 @@
 package com.easy.pojo.dto;
 
 import com.easy.constant.MessageConstant;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -48,4 +49,5 @@ public class UserDTO implements Serializable {
      */
     @Pattern(regexp = "^.{0,100}$", message = MessageConstant.WORD_LIMIT_ERROR)
     private String introduction;
+
 }

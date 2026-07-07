@@ -11,6 +11,7 @@ import lombok.experimental.Accessors;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.lang.reflect.Type;
 import java.time.LocalDate;
 
 /**
@@ -49,6 +50,12 @@ public class Song implements Serializable {
     private String songName;
 
     /**
+     * 歌手名
+     */
+    @TableField("artist_name")
+    private String artistName;
+
+    /**
      * 专辑
      */
     @TableField("album")
@@ -57,8 +64,19 @@ public class Song implements Serializable {
     /**
      * 歌词
      */
-    @TableField("lyric")
-    private String lyric;
+    @TableField("lyrics")
+    private String lyrics;
+
+    @TableField("lyrics_head")
+    private String lyricsHead;
+
+
+    @TableField(exist = false)
+    private String lyricsSegment;
+
+
+    @TableField("nested")
+    private String nested;
 
     /**
      * 歌曲时长
@@ -90,5 +108,17 @@ public class Song implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd")
     @TableField("release_time")
     private LocalDate releaseTime;
+
+    @TableField("favorite_count")
+    private Long favoriteCount;
+
+    @TableField("play_count")
+    private Long playCount;
+
+
+    @TableField(exist = false)
+    private Boolean isFavorite = false;
+
+
 
 }

@@ -1,9 +1,6 @@
 package com.easy.interceptor;
 
 
-import com.auth0.jwt.exceptions.JWTVerificationException;
-import com.auth0.jwt.exceptions.TokenExpiredException;
-import com.easy.constant.MessageConstant;
 import com.easy.utils.JwtUtil;
 import com.easy.utils.ThreadLocalUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -67,9 +63,8 @@ public class RefreshTokenInterceptor implements HandlerInterceptor {
         long userId = Long.parseLong(claims.get("userId").toString());
         String role = claims.get("role").toString();
 
-        stringRedisTemplate.expire("login:"+role+":"+userId, 1, TimeUnit.HOURS);
+        stringRedisTemplate.expire("login:"+role+":"+userId, 6, TimeUnit.HOURS);
         return true;
-
 
     }
 
