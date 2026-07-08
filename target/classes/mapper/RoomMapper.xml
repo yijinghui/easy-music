@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.easy.mapper.RoomMapper">
+
+    <select id="listWithUserInfo" resultType="com.easy.pojo.entity.Room">
+        SELECT
+        r.id AS roomId,
+        r.room_name AS roomName,
+        r.creator_id AS creatorId,
+        r.room_status AS roomStatus,
+        r.max_users AS maxUsers,
+        r.create_time AS createTime,
+        r.close_time AS closeTime,
+        u.username AS creatorNickname,
+        u.user_avatar AS creatorAvatar
+        FROM tb_music_room r
+        LEFT JOIN tb_user u ON r.creator_id = u.id
+        WHERE r.id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        ORDER BY r.create_time DESC
+    </select>
+</mapper>

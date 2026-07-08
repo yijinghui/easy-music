@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音乐歌房测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+            font-size: 1.2em;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #38a169;
+        }
+        .btn-warning {
+            background: #ed8936;
+            color: white;
+        }
+        .btn-warning:hover {
+            background: #dd6b20;
+        }
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .status.connected {
+            background: #48bb78;
+            color: white;
+        }
+        .status.disconnected {
+            background: #f56565;
+            color: white;
+        }
+        .room-info {
+            background: #e7f3ff;
+            border: 2px solid #b3d7ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .room-info p {
+            margin: 8px 0;
+            color: #333;
+        }
+        .online-count {
+            font-size: 24px;
+            color: #667eea;
+            font-weight: bold;
+        }
+        .player-container {
+            background: #333;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .player-container audio {
+            width: 100%;
+            margin-top: 15px;
+        }
+        .song-info {
+            margin-bottom: 15px;
+        }
+        .song-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .song-artist {
+            color: #aaa;
+            font-size: 14px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #555;
+            border-radius: 3px;
+            margin: 15px 0;
+            cursor: pointer;
+            position: relative;
+        }
+        .progress-bar .progress {
+            height: 100%;
+            background: #667eea;
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.1s;
+        }
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #aaa;
+        }
+        .chat-container {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            background: #fafafa;
+        }
+        .chat-message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: white;
+            border-left: 3px solid #667eea;
+        }
+        .chat-message.self {
+            background: #e7f3ff;
+            border-left-color: #48bb78;
+            margin-left: 20%;
+        }
+        .chat-message .sender {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 13px;
+        }
+        .chat-message.self .sender {
+            color: #48bb78;
+        }
+        .chat-message .time {
+            color: #999;
+            font-size: 11px;
+            float: right;
+        }
+        .chat-message .content {
+            margin-top: 5px;
+            color: #333;
+            word-break: break-all;
+        }
+        .input-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .input-row input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .log-container {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            background: white;
+            border-left: 3px solid #667eea;
+        }
+        .log-entry.success {
+            border-left-color: #48bb78;
+        }
+        .log-entry.error {
+            border-left-color: #f56565;
+        }
+        .log-entry .timestamp {
+            color: #999;
+            margin-right: 10px;
+        }
+        .two-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .two-columns {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 音乐歌房测试页面</h1>
+
+        <!-- 连接管理 -->
+        <div class="card">
+            <h2>🔗 连接管理</h2>
+            <div class="form-group">
+                <label>JWT Token (从登录接口获取)</label>
+                <input type="text" id="token" placeholder="请输入JWT Token">
+            </div>
+            <div class="form-group">
+                <label>WebSocket 地址</label>
+                <input type="text" id="wsUrl" value="ws://localhost:8080/ws/room">
+            </div>
+            <button class="btn btn-success" onclick="connect()">连接WebSocket</button>
+            <button class="btn btn-danger" onclick="disconnect()">断开连接</button>
+            <div id="connectionStatus">
+                <span class="status disconnected">❌ 未连接</span>
+            </div>
+        </div>
+
+        <!-- 歌房管理 -->
+        <div class="card">
+            <h2>🏠 歌房管理</h2>
+            <div class="two-columns">
+                <div>
+                    <div class="form-group">
+                        <label>歌房ID</label>
+                        <input type="number" id="roomId" placeholder="请输入歌房ID">
+                    </div>
+                    <button class="btn btn-primary" onclick="joinRoom()">加入歌房</button>
+                    <button class="btn btn-danger" onclick="leaveRoom()">离开歌房</button>
+                    <button class="btn btn-info" onclick="syncRoom()">同步状态</button>
+                </div>
+                <div>
+                    <div class="room-info" id="roomInfo" style="display:none;">
+                        <p><strong>当前歌房ID:</strong> <span id="currentRoomId">-</span></p>
+                        <p><strong>在线人数:</strong> <span class="online-count" id="onlineCount">0</span></p>
+                        <p><strong>播放状态:</strong> <span id="playStatus">-</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 播放器 -->
+        <div class="card">
+            <h2>🎵 歌曲播放器</h2>
+            <div class="player-container">
+                <div class="song-info" id="songInfo">
+                    <img id="songCover" src="" alt="歌曲封面" style="display:none; width:200px; height:200px; margin-bottom:15px; border-radius:8px;">
+                    <div class="song-title" id="songTitle">未播放歌曲</div>
+                    <div class="song-artist" id="songArtist">-</div>
+                </div>
+                <div class="progress-bar" id="progressBar" onclick="seekTo(event)">
+                    <div class="progress" id="progress"></div>
+                </div>
+                <div class="time-display">
+                    <span id="currentTime">00:00</span>
+                    <span id="duration">00:00</span>
+                </div>
+                <audio id="audioPlayer" controls>
+                    您的浏览器不支持音频播放
+                </audio>
+            </div>
+            <div style="margin-top: 15px;">
+                <button class="btn btn-success" onclick="playSong()">▶ 播放</button>
+                <button class="btn btn-warning" onclick="pauseSong()">⏸ 暂停</button>
+                <span style="margin-left: 20px;">歌曲URL:</span>
+                <input type="text" id="songUrl" placeholder="请输入歌曲URL" style="width: 300px;">
+            </div>
+        </div>
+
+        <!-- 聊天室 -->
+        <div class="card">
+            <h2>💬 聊天室</h2>
+            <div class="chat-container" id="chatContainer"></div>
+            <div class="input-row">
+                <input type="text" id="chatInput" placeholder="输入聊天内容..." onkeypress="handleChatKeypress(event)">
+                <button class="btn btn-primary" onclick="sendChat()">发送</button>
+            </div>
+        </div>
+
+        <!-- 操作日志 -->
+        <div class="card">
+            <h2>📝 操作日志</h2>
+            <button class="btn btn-danger" onclick="clearLog()">清空日志</button>
+            <div class="log-container" id="logContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let currentRoomId = null;
+        let currentSong = null;
+        let isPlaying = false;
+
+        // 音频播放器
+        const audioPlayer = document.getElementById('audioPlayer');
+        const progressBar = document.getElementById('progressBar');
+        const progressEl = document.getElementById('progress');
+        const currentTimeEl = document.getElementById('currentTime');
+        const durationEl = document.getElementById('duration');
+
+        // 音频事件监听
+        audioPlayer.addEventListener('timeupdate', updateProgress);
+        audioPlayer.addEventListener('loadedmetadata', () => {
+            durationEl.textContent = formatTime(audioPlayer.duration);
+        });
+        audioPlayer.addEventListener('ended', () => {
+            isPlaying = false;
+            updatePlayStatusDisplay('已停止');
+        });
+        audioPlayer.addEventListener('play', () => {
+            isPlaying = true;
+            updatePlayStatusDisplay('播放中');
+        });
+        audioPlayer.addEventListener('pause', () => {
+            isPlaying = false;
+            updatePlayStatusDisplay('已暂停');
+        });
+
+        // 工具函数
+        function getToken() {
+            return document.getElementById('token').value.trim();
+        }
+
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '00:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // 日志输出
+        function log(message, type = 'info') {
+            const container = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const time = new Date().toLocaleTimeString();
+            entry.innerHTML = `<span class="timestamp">[${time}]</span> ${message}`;
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('logContainer').innerHTML = '';
+        }
+
+        // API 请求
+        async function apiRequest(method, endpoint, data = null) {
+            const token = getToken();
+            if (!token) {
+                log('请先输入JWT Token', 'error');
+                return null;
+            }
+
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': token
+                }
+            };
+
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+
+            try {
+                const response = await fetch(`http://localhost:8080${endpoint}`, options);
+                const result = await response.json();
+                log(`${method} ${endpoint}: ${JSON.stringify(result)}`, response.ok ? 'success' : 'error');
+                return result;
+            } catch (error) {
+                log(`请求失败: ${error.message}`, 'error');
+                return null;
+            }
+        }
+
+        // WebSocket 连接
+        function connect() {
+            const token = getToken();
+            if (!token) {
+                log('请先输入JWT Token', 'error');
+                return;
+            }
+
+            const wsUrl = document.getElementById('wsUrl').value + `?token=${encodeURIComponent(token)}`;
+            log(`正在连接WebSocket: ${wsUrl}`, 'info');
+
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = function() {
+                log('WebSocket 连接成功', 'success');
+                updateConnectionStatus(true);
+            };
+
+            ws.onmessage = function(event) {
+                handleMessage(JSON.parse(event.data));
+            };
+
+            ws.onerror = function(error) {
+                log('WebSocket 连接错误', 'error');
+                updateConnectionStatus(false);
+            };
+
+            ws.onclose = function() {
+                log('WebSocket 连接已关闭', 'error');
+                updateConnectionStatus(false);
+                currentRoomId = null;
+                hideRoomInfo();
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                if (currentRoomId) {
+                    sendWsMessage({ action: 'leave', roomId: currentRoomId });
+                }
+                ws.close();
+                ws = null;
+                updateConnectionStatus(false);
+                currentRoomId = null;
+                hideRoomInfo();
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.innerHTML = `<span class="status ${connected ? 'connected' : 'disconnected'}">${connected ? '✅ 已连接' : '❌ 未连接'}</span>`;
+        }
+
+        function sendWsMessage(data) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(data));
+                log(`发送: ${JSON.stringify(data)}`, 'info');
+            } else {
+                log('WebSocket未连接', 'error');
+            }
+        }
+
+        function handleMessage(data) {
+            log(`收到: ${JSON.stringify(data)}`, 'info');
+
+            switch(data.action) {
+                case 'userJoin':
+                    log(`用户 ${data.nickname} 加入了歌房，当前在线 ${data.onlineCount} 人`, 'success');
+                    updateOnlineCount(data.onlineCount);
+                    break;
+
+                case 'userLeave':
+                    log(`用户 ${data.userNickname} 离开了歌房，当前在线 ${data.onlineCount} 人`, 'info');
+                    updateOnlineCount(data.onlineCount);
+                    break;
+
+                case 'roomClose':
+                    log('歌房已关闭', 'error');
+                    currentRoomId = null;
+                    hideRoomInfo();
+                    alert('歌房已关闭');
+                    break;
+
+                case 'sync':
+                    handleSync(data);
+                    break;
+
+                case 'play':
+                    handlePlay(data);
+                    break;
+
+                case 'pause':
+                    handlePause(data);
+                    break;
+
+                case 'seek':
+                    handleSeek(data);
+                    break;
+
+                case 'chat':
+                    addChatMessage(data.nickname, data.content, false);
+                    break;
+
+                case 'error':
+                    log(`错误: ${data.message}`, 'error');
+                    alert(data.message);
+                    break;
+            }
+        }
+
+        // 歌房操作
+        function joinRoom() {
+            const roomId = document.getElementById('roomId').value;
+            if (!roomId) {
+                log('请输入歌房ID', 'error');
+                return;
+            }
+
+            currentRoomId = parseInt(roomId);
+            document.getElementById('currentRoomId').textContent = currentRoomId;
+            showRoomInfo();
+
+            sendWsMessage({ action: 'join', roomId: currentRoomId });
+        }
+
+        function leaveRoom() {
+            if (!currentRoomId) {
+                log('请先加入歌房', 'error');
+                return;
+            }
+
+            sendWsMessage({ action: 'leave', roomId: currentRoomId });
+            currentRoomId = null;
+            hideRoomInfo();
+            log('已离开歌房', 'success');
+        }
+
+        function syncRoom() {
+            if (!currentRoomId) {
+                log('请先加入歌房', 'error');
+                return;
+            }
+
+            sendWsMessage({ action: 'sync', roomId: currentRoomId });
+            log('已发送同步请求', 'info');
+        }
+
+        function showRoomInfo() {
+            document.getElementById('roomInfo').style.display = 'block';
+        }
+
+        function hideRoomInfo() {
+            document.getElementById('roomInfo').style.display = 'none';
+            document.getElementById('onlineCount').textContent = '0';
+        }
+
+        function updateOnlineCount(count) {
+            document.getElementById('onlineCount').textContent = count;
+        }
+
+        function updatePlayStatusDisplay(status) {
+            document.getElementById('playStatus').textContent = status;
+        }
+
+        // 同步处理
+        function handleSync(data) {
+            log('收到同步消息', 'info');
+
+            if (data.song) {
+                try {
+                    currentSong = JSON.parse(data.song);
+                    log(`解析歌曲信息: ${currentSong.songName}`, 'success');
+
+                    // 显示歌曲信息
+                    document.getElementById('songTitle').textContent = currentSong.songName || '未知歌曲';
+                    document.getElementById('songArtist').textContent = currentSong.artistName || '未知歌手';
+
+                    // 拼接MinIO地址
+                    const minioBaseUrl = 'http://localhost:9000/vibe-music-data';
+                    const audioUrl = currentSong.audioUrl ? `${minioBaseUrl}/${currentSong.audioUrl}` : '';
+                    const coverUrl = currentSong.coverUrl ? `${minioBaseUrl}/${currentSong.coverUrl}` : '';
+
+                    // 更新歌曲URL输入框
+                    const songUrlInput = document.getElementById('songUrl');
+                    songUrlInput.value = audioUrl;
+
+                    // 更新封面显示
+                    const coverEl = document.getElementById('songCover');
+                    if (coverEl) {
+                        coverEl.src = coverUrl;
+                        coverEl.style.display = coverUrl ? 'block' : 'none';
+                    }
+
+                    log(`歌曲URL: ${audioUrl}`, 'info');
+                    log(`封面URL: ${coverUrl}`, 'info');
+                    log(`歌曲时长: ${currentSong.duration}秒`, 'info');
+                } catch (e) {
+                    log('解析歌曲信息失败: ' + e.message, 'error');
+                    return;
+                }
+            }
+
+            // 更新在线人数
+            if (data.onlineCount !== undefined) {
+                updateOnlineCount(data.onlineCount);
+                log(`当前在线人数: ${data.onlineCount}`, 'info');
+            }
+
+            // 同步播放状态
+            if (data.playStatus !== undefined) {
+                if (data.playStatus === 1 && data.song) {
+                    // 如果服务端在播放，客户端也自动播放
+                    const songUrl = document.getElementById('songUrl').value;
+                    if (songUrl) {
+                        if (audioPlayer.src !== songUrl) {
+                            audioPlayer.src = songUrl;
+                            audioPlayer.load();
+                        }
+
+                        // 计算实际播放进度：当前时间 - 开始时间 + progress
+                        let actualProgress = 0;
+                        if (data.startTime) {
+                            const now = Date.now();
+                            actualProgress = now - data.startTime + (data.progress || 0);
+                            log(`进度计算: ${now} - ${data.startTime} + ${data.progress || 0} = ${actualProgress}ms`, 'info');
+                        } else if (data.progress !== undefined) {
+                            actualProgress = data.progress;
+                        }
+
+                        // 确保进度在有效范围内
+                        const durationMs = (currentSong && currentSong.duration) ? parseFloat(currentSong.duration) * 1000 : Infinity;
+                        if (actualProgress > durationMs && durationMs > 0) {
+                            actualProgress = actualProgress % durationMs;
+                        }
+                        if (actualProgress < 0) {
+                            actualProgress = 0;
+                        }
+
+                        audioPlayer.currentTime = actualProgress / 1000 || 0;
+                        log(`同步播放进度: ${actualProgress}ms (${(actualProgress/1000).toFixed(2)}秒)`, 'info');
+
+                        if (!isPlaying) {
+                            audioPlayer.play().then(() => {
+                                log('自动播放歌曲', 'success');
+                            }).catch(err => {
+                                log('自动播放失败: ' + err.message, 'error');
+                            });
+                        }
+                    }
+                    updatePlayStatusDisplay('播放中');
+                } else if (data.playStatus === 0) {
+                    // 停止播放并清除进度同步
+                    if (window.syncProgressInterval) {
+                        clearInterval(window.syncProgressInterval);
+                        window.syncProgressInterval = null;
+                    }
+                    audioPlayer.pause();
+                    updatePlayStatusDisplay('已暂停');
+                    log('同步暂停状态', 'info');
+                }
+            }
+        }
+
+        function handlePlay(data) {
+            log(`开始播放歌曲 ${data.songId}`, 'success');
+            updatePlayStatusDisplay('播放中');
+
+            const songUrl = document.getElementById('songUrl').value;
+            if (songUrl) {
+                if (audioPlayer.src !== songUrl) {
+                    audioPlayer.src = songUrl;
+                }
+                audioPlayer.currentTime = data.progress / 1000 || 0;
+                audioPlayer.play();
+            }
+        }
+
+        function handlePause(data) {
+            log('收到暂停命令', 'info');
+            updatePlayStatusDisplay('已暂停');
+
+            // 同步暂停时的进度
+            if (data.progress !== undefined) {
+                audioPlayer.currentTime = data.progress / 1000 || 0;
+                log(`同步暂停进度: ${data.progress}ms`, 'info');
+            }
+
+            // 清除进度同步定时器
+            if (window.syncProgressInterval) {
+                clearInterval(window.syncProgressInterval);
+                window.syncProgressInterval = null;
+            }
+
+            audioPlayer.pause();
+        }
+
+        function handleSeek(data) {
+            log(`跳转到 ${data.progress}ms`, 'info');
+            audioPlayer.currentTime = data.progress / 1000;
+        }
+
+        // 播放器控制
+        function playSong() {
+            if (!currentRoomId) {
+                log('请先加入歌房', 'error');
+                return;
+            }
+
+            const songUrl = document.getElementById('songUrl').value;
+            if (!songUrl) {
+                log('请输入歌曲URL', 'error');
+                return;
+            }
+
+            audioPlayer.src = songUrl;
+            audioPlayer.play();
+
+            // 获取当前播放进度（毫秒）
+            const progress = Math.floor(audioPlayer.currentTime * 1000);
+
+            // 发送播放消息（需要songId，这里用当前时间戳作为临时ID）
+            sendWsMessage({
+                action: 'play',
+                roomId: currentRoomId,
+                songId: 2, // 临时songId
+                progress: progress
+            });
+        }
+
+        function pauseSong() {
+            if (!currentRoomId) {
+                log('请先加入歌房', 'error');
+                return;
+            }
+
+            const progress = Math.floor(audioPlayer.currentTime * 1000);
+            audioPlayer.pause();
+
+            sendWsMessage({
+                action: 'pause',
+                roomId: currentRoomId,
+                progress: progress
+            });
+        }
+
+        function seekTo(event) {
+            if (!currentRoomId) {
+                log('请先加入歌房', 'error');
+                return;
+            }
+
+            const rect = progressBar.getBoundingClientRect();
+            const percent = (event.clientX - rect.left) / rect.width;
+            const time = percent * audioPlayer.duration;
+
+            audioPlayer.currentTime = time;
+
+            const progress = Math.floor(time * 1000);
+            sendWsMessage({
+                action: 'seek',
+                roomId: currentRoomId,
+                progress: progress
+            });
+        }
+
+        function updateProgress() {
+            const percent = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+            progressEl.style.width = percent + '%';
+            currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
+        }
+
+        // 聊天功能
+        function sendChat() {
+            const content = document.getElementById('chatInput').value.trim();
+
+            if (!content) {
+                log('请输入聊天内容', 'error');
+                return;
+            }
+
+            if (!currentRoomId) {
+                log('请先加入歌房', 'error');
+                return;
+            }
+
+            sendWsMessage({ action: 'chat', roomId: currentRoomId, content: content });
+            addChatMessage('我', content, true);
+            document.getElementById('chatInput').value = '';
+        }
+
+        function addChatMessage(nickname, content, isSelf) {
+            const container = document.getElementById('chatContainer');
+            const message = document.createElement('div');
+            message.className = `chat-message ${isSelf ? 'self' : ''}`;
+            const time = new Date().toLocaleTimeString();
+            message.innerHTML = `
+                <span class="sender">${nickname}</span>
+                <span class="time">${time}</span>
+                <div class="content">${content}</div>
+            `;
+            container.appendChild(message);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function handleChatKeypress(event) {
+            if (event.key === 'Enter') {
+                sendChat();
+            }
+        }
+
+        // 页面加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            log('音乐歌房测试页面加载完成', 'success');
+        });
+    </script>
+</body>
+</html>

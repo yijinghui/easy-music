@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.easy.mapper.SongMapper">
+    <select id="getAllSongs" resultType="com.easy.pojo.entity.Song">
+        SELECT
+        s.id AS songId,
+        s.name AS songName,
+        s.album AS album,
+        s.lyrics AS lyrics,
+        s.duration AS duration,
+        s.style AS style,
+        s.cover_url AS coverUrl,
+        s.audio_url AS audioUrl,
+        s.release_time AS releaseTime,
+        s.artist_id AS artistId,
+        s.artist_name AS artistName,
+        s.favorite_count AS favoriteCount
+        FROM tb_song s
+        <where>
+            <if test="id != null">
+                and s.id= #{id}
+            </if>
+            <if test="artistId != null">
+                and s.artist_id=#{artistId}
+            </if>
+            <if test="songName != null and songName !=''">
+                and s.name like concat('%',#{songName},'%')
+            </if>
+            <if test="album != null  and album !=''">
+                and s.album like concat('%',#{album},'%')
+            </if>
+            <if test="style != null  and style !=''">
+                and s.style like concat('%',#{style},'%')
+            </if>
+
+        </where>
+        ORDER BY s.id DESC
+    </select>
+    <select id="getUserFavoriteSongs" resultType="com.easy.pojo.entity.Song">
+        SELECT
+            s.id AS songId,
+            s.name AS songName,
+            s.album AS album,
+            s.duration AS duration,
+            s.style AS style,
+            s.cover_url AS coverUrl,
+            s.audio_url AS audioUrl,
+            s.release_time AS releaseTime,
+            s.artist_name AS artistName,
+            s.favorite_count AS favoriteCount,
+            s.lyrics AS lyrics,
+            s.lyrics_head AS lyricsHead,
+            s.nested AS nested
+        FROM tb_user_favorite uf
+        INNER JOIN tb_song s ON uf.song_id = s.id
+        WHERE uf.user_id = #{userId}
+          AND uf.type = 0
+        ORDER BY uf.create_time DESC
+    </select>
+    <select id="getFavoriteSongStyles" resultType="java.lang.Long">
+        SELECT g.style_id
+        FROM tb_genre g
+        WHERE g.song_id IN
+        <foreach collection="songIds" item="songId" open="(" separator="," close=")">
+            #{songId}
+        </foreach>
+    </select>
+    <select id="getRecommendedSongsByStyles" resultType="com.easy.pojo.entity.Song">
+        SELECT DISTINCT
+            s.id AS songId,
+            s.name AS songName,
+            s.album AS album,
+            s.lyrics AS lyrics,
+            s.duration AS duration,
+            s.style AS style,
+            s.cover_url AS coverUrl,
+            s.audio_url AS audioUrl,
+            s.release_time AS releaseTime,
+            s.artist_name AS artistName,
+            s.favorite_count AS favoriteCount
+        FROM tb_song s
+        INNER JOIN tb_genre g ON s.id = g.song_id
+        WHERE g.style_id IN
+        <foreach collection="styleIds" item="styleId" open="(" separator="," close=")">
+            #{styleId}
+        </foreach>
+        <if test="excludeSongIds != null and excludeSongIds.size() > 0">
+            AND s.id NOT IN
+            <foreach collection="excludeSongIds" item="songId" open="(" separator="," close=")">
+                #{songId}
+            </foreach>
+        </if>
+        ORDER BY RAND()
+        LIMIT #{limit}
+    </select>
+    <select id="getSongsByPlaylistId" resultType="com.easy.pojo.entity.Song">
+        SELECT
+        s.id AS songId,
+        s.name AS songName,
+        s.album AS album,
+        s.lyrics AS lyrics,
+        s.duration AS duration,
+        s.style AS style,
+        s.cover_url AS coverUrl,
+        s.audio_url AS audioUrl,
+        s.release_time AS releaseTime,
+        s.artist_name AS artistName,
+        s.favorite_count AS favoriteCount
+        FROM tb_song s
+        LEFT JOIN tb_playlist_song ps ON s.id = ps.song_id
+        WHERE ps.playlist_id=#{playlistId}
+    </select>
+    <select id="getTop200SongsByWeek" resultType="com.easy.pojo.entity.Song">
+        SELECT
+        s.id           AS songId,
+        s.name         AS songName,
+        s.album        AS album,
+        s.lyrics       AS lyrics,
+        s.duration     AS duration,
+        s.style        AS style,
+        s.cover_url    AS coverUrl,
+        s.audio_url    AS audioUrl,
+        s.release_time AS releaseTime,
+        s.artist_name  AS artistName,
+        t.playCount
+        FROM tb_song s
+        INNER JOIN (SELECT song_id, COUNT(*) AS playCount
+        FROM tb_play_record
+        WHERE create_time >= DATE_FORMAT(DATE_SUB(NOW(), INTERVAL WEEKDAY(NOW()) + 7 DAY), '%Y-%m-%d')
+        AND create_time &lt; DATE_FORMAT(DATE_SUB(NOW(), INTERVAL WEEKDAY(NOW()) DAY), '%Y-%m-%d')
+        GROUP BY song_id
+        ORDER BY playCount DESC
+        LIMIT 200) t ON s.id = t.song_id
+        ORDER BY t.playCount DESC;
+    </select>
+    <select id="getTop200SongsByMonth" resultType="com.easy.pojo.entity.Song">
+        SELECT
+        s.id           AS songId,
+        s.name         AS songName,
+        s.album        AS album,
+        s.lyrics        AS lyrics,
+        s.duration     AS duration,
+        s.style        AS style,
+        s.cover_url    AS coverUrl,
+        s.audio_url    AS audioUrl,
+        s.release_time AS releaseTime,
+        s.artist_name  AS artistName,
+        t.playCount
+        FROM tb_song s
+        INNER JOIN (SELECT song_id, COUNT(*) AS playCount
+        FROM tb_play_record
+        WHERE create_time >= DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 1 MONTH), '%Y-%m-01')
+          AND create_time &lt; DATE_FORMAT(NOW(), '%Y-%m-01')
+        GROUP BY song_id
+        LIMIT 200) t ON s.id = t.song_id
+        ORDER BY t.playCount DESC;
+    </select>
+    <select id="getByIds" resultType="com.easy.pojo.entity.Song">
+        SELECT id AS songId,
+        name AS songName,
+        album AS album,
+        lyrics AS lyrics,
+        lyrics_head AS lyricsHead,
+        nested AS nested,
+        duration AS duration,
+        style AS style,
+        cover_url AS coverUrl,
+        audio_url AS audioUrl,
+        release_time AS releaseTime,
+        artist_id AS artistId,
+        artist_name AS `artistname`,
+        favorite_count AS favoriteCount
+
+        FROM tb_song
+        WHERE id IN
+        <foreach collection="songIds" item="songId" open="(" separator="," close=")">
+            #{songId}
+        </foreach>
+        ORDER BY FIELD(id,
+        <foreach collection="songIds" item="songId" separator=",">
+            #{songId}
+        </foreach>)
+    </select>
+
+</mapper>

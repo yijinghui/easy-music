@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.easy.mapper.CommentMapper">
+    <update id="updateHotComment">
+        UPDATE tb_comment
+        SET is_hot = 1
+        WHERE create_time >= DATE_SUB(NOW(), INTERVAL 10 DAY )
+          AND (LOG2(like_count + 1) + 1) *
+              POWER(0.5, TIMESTAMPDIFF(HOUR, create_time, NOW()) / 12.5) >= 2
+    </update>
+
+    <select id="selectCommentInfo" resultType="com.easy.pojo.vo.CommentInfoVO">
+        select
+            c1.id as commentId,
+            c1.user_id as userId,
+            u.username as username,
+            u.user_avatar as userAvatar,
+            c1.content as content,
+            c1.create_time as createTime,
+            u2.username as replyUsername
+        from tb_comment c1
+                 join tb_user u ON c1.user_id = u.id
+                 left join tb_comment c2 ON c1.parent_id = c2.id
+                 left join tb_user u2 ON c2.user_id = u2.id
+        WHERE c1.id = #{commentId}
+    </select>
+    <select id="selectCommentInfos" resultType="com.easy.pojo.vo.CommentInfoVO">
+        select
+            c1.id as commentId,
+            c1.user_id as userId,
+            u.username as username,
+            u.user_avatar as userAvatar,
+            c1.content as content,
+            c1.create_time as createTime,
+            u2.username as replyUsername,
+            c1.has_children as hasChildren,
+            c1.root_id as rootId,
+            c1.parent_id as parentId
+
+        from tb_comment c1
+                 join tb_user u ON c1.user_id = u.id
+                 left join tb_comment c2 ON c1.parent_id = c2.id
+                 left join tb_user u2 ON c2.user_id = u2.id
+        WHERE c1.id in
+        <foreach item="item" collection="commentIds" separator="," open="(" close=")" index="index">
+            #{item}
+        </foreach>
+        order by field(c1.id,
+        <foreach item="item" collection="commentIds" separator="," index="index">
+            #{item}
+        </foreach>
+        )
+    </select>
+    <select id="scrollPageComment" resultType="com.easy.pojo.vo.CommentInfoVO">
+        select
+        c1.id as commentId,
+        c1.user_id as userId,
+        u.username as username,
+        u.user_avatar as userAvatar,
+        c1.content as content,
+        c1.create_time as createTime,
+        u2.username as replyUsername,
+        c1.root_id as rootId,
+        c1.parent_id as parentId,
+        c1.like_count as likeCount,
+        c1.is_hot as isHot,
+        (SELECT COUNT(*) FROM tb_comment WHERE root_id = c1.id) as childrenCount
+        from tb_comment c1
+        join tb_user u ON c1.user_id = u.id
+        LEFT JOIN tb_comment c2 ON c1.parent_id = c2.id
+        left join tb_user u2 ON c2.user_id = u2.id
+        <where>
+            <if test="playlistId != null">
+                c1.playlist_id = #{playlistId}
+            </if>
+            <if test="songId != null">
+                c1.song_id = #{songId}
+            </if>
+            <if test="firstId != 0">
+                and c1.id &lt; #{firstId}
+            </if>
+            and c1.root_id = #{rootId}
+            and c1.is_hot = 0
+        </where>
+        order by c1.create_time
+        <choose>
+            <when test="rootId &gt; 0">
+                asc, c1.id asc
+            </when>
+            <otherwise>
+                desc, c1.id desc
+            </otherwise>
+        </choose>
+        limit 200;
+    </select>
+    <select id="selectHotComment" resultType="com.easy.pojo.vo.CommentInfoVO">
+        select
+        c1.id as commentId,
+        c1.user_id as userId,
+        u.username as username,
+        u.user_avatar as userAvatar,
+        c1.content as content,
+        c1.create_time as createTime,
+        u2.username as replyUsername,
+        c1.root_id as rootId,
+        c1.parent_id as parentId,
+        c1.like_count as likeCount,
+        c1.is_hot as isHot,
+        (SELECT COUNT(*) FROM tb_comment WHERE root_id = c1.id) as childrenCount
+        from tb_comment c1
+        join tb_user u ON c1.user_id = u.id
+        LEFT JOIN tb_comment c2 ON c1.parent_id = c2.id
+        left join tb_user u2 ON c2.user_id = u2.id
+        <where>
+            <if test="playlistId != null">
+                c1.playlist_id = #{playlistId}
+            </if>
+            <if test="songId != null">
+                c1.song_id = #{songId}
+            </if>
+            and c1.root_id = 0
+            and c1.is_hot = 1
+        </where>
+        order by c1.like_count desc ,c1.id desc
+    </select>
+</mapper>

@@ -1,0 +1,17 @@
+{
+  "groups": [
+    {
+      "name": "role-path-permissions",
+      "type": "com.easy.config.RolePathPermissionsConfig",
+      "sourceType": "com.easy.config.RolePathPermissionsConfig"
+    }
+  ],
+  "properties": [
+    {
+      "name": "role-path-permissions.permissions",
+      "type": "java.util.Map<java.lang.String,java.util.List<java.lang.String>>",
+      "sourceType": "com.easy.config.RolePathPermissionsConfig"
+    }
+  ],
+  "hints": []
+}
