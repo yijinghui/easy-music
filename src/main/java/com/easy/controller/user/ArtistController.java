@@ -3,6 +3,7 @@ package com.easy.controller.user;
 
 import com.easy.pojo.dto.ArtistDTO;
 import com.easy.pojo.dto.ArtistPageQueryDTO;
+import com.easy.pojo.dto.PageQueryDTO;
 import com.easy.pojo.dto.SongDTO;
 import com.easy.pojo.dto.group.UpdateGroup;
 import com.easy.pojo.entity.Artist;
@@ -30,6 +31,11 @@ public class ArtistController {
     private final ArtistService artistService;
     private final SongService songService;
 
+    @Operation(summary = "搜索歌手接口")
+    @GetMapping("/search")
+    public Result<PageResult> search(@RequestParam @NotBlank String artistName, @Valid PageQueryDTO pageQueryDTO) {
+        return Result.success(artistService.search(artistName, pageQueryDTO));
+    }
     @Operation(summary = "根据ID获取歌手详情")
     @GetMapping("/{artistId}")
     public Result<Artist> getById(

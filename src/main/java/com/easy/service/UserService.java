@@ -5,6 +5,7 @@ import com.easy.pojo.vo.UserVO;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -43,4 +44,6 @@ public interface UserService {
 
 
     void deleteAccount(String token);
+
+    PageResult search(@NotBlank(message = "搜索内容不能为空") String username, @Valid PageQueryDTO pageQueryDTO);
 }

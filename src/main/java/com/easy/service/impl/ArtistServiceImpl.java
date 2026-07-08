@@ -15,6 +15,7 @@ import com.easy.mapper.SongMapper;
 import com.easy.mapper.UserMapper;
 import com.easy.pojo.dto.ArtistPageQueryDTO;
 import com.easy.pojo.dto.ArtistDTO;
+import com.easy.pojo.dto.PageQueryDTO;
 import com.easy.pojo.dto.SongDTO;
 import com.easy.pojo.entity.Artist;
 import com.easy.pojo.entity.ArtistAuth;
@@ -199,6 +200,13 @@ public class ArtistServiceImpl extends ServiceImpl<ArtistMapper, Artist> impleme
 
     }
 
+    @Override
+    public PageResult search(String artistName, PageQueryDTO pageQueryDTO) {
+        Page<Artist> page = new Page<>(pageQueryDTO.getPageNum(), pageQueryDTO.getPageSize());
+        Page<Artist> result = lambdaQuery().like(Artist::getArtistName, artistName)
+                .page(page);
+        return new PageResult(result.getTotal(), result.getRecords());
+    }
 
 
 }

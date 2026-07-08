@@ -30,6 +30,10 @@ import org.springframework.data.redis.core.ReactiveRedisOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -46,7 +50,7 @@ import static com.easy.constant.MessageConstant.ACCESS_DENIED;
 @Slf4j
 @RequiredArgsConstructor
 @Service
-public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> implements PlaylistService{
+public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> implements PlaylistService {
 
 
     private final PlaylistSongMapper playlistSongMapper;
@@ -65,11 +69,11 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
     @Override
     public Result<Long> getAllPlaylistsCount(String style) {
 
-        QueryWrapper<Playlist>queryWrapper=new QueryWrapper<>();
+        QueryWrapper<Playlist> queryWrapper = new QueryWrapper<>();
 
         // 若style不为null则按style查询，否则全量查询
-        if (style!=null){
-            queryWrapper.eq("style",style);
+        if (style != null) {
+            queryWrapper.eq("style", style);
         }
 
         Long count = baseMapper.selectCount(queryWrapper);
@@ -83,11 +87,10 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
         Page<Playlist> page = new Page<>(pageQueryDTO.getPageNum(), pageQueryDTO.getPageSize());
 
 
-
         Page<PlaylistVO> playlistPage = baseMapper.selectPageWithPlaylistInfo(page, pageQueryDTO);
 
-        if (playlistPage.getRecords().isEmpty()){
-            return Result.success("未找到相关数据",new PageResult(0L,null));
+        if (playlistPage.getRecords().isEmpty()) {
+            return Result.success("未找到相关数据", new PageResult(0L, null));
         }
 
         List<PlaylistVO> playlistVOList = playlistPage.getRecords();
@@ -103,16 +106,20 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
 
         Playlist playlist = new Playlist();
         playlist.setUserId(ThreadLocalUtil.getUserId());
-        BeanUtil.copyProperties(playlistDTO,playlist,
-                "playlistId");
-
+        playlist.setTitle(playlistDTO.getTitle());
+        playlist.setCoverUrl("playlists/playlist_default.webp");
         save(playlist);
     }
+
 
     @Override
     public Result updatePlaylist(PlaylistDTO playlistDTO) {
         return null;
     }
+
+
+
+
 
     @Override
     public void update(PlaylistDTO playlistDTO) {
@@ -120,77 +127,21 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
         Long userId = ThreadLocalUtil.getUserId();
 
         Playlist playlist = getById(playlistId);
-        if(!playlist.getUserId().equals(userId)){
+        if (!playlist.getUserId().equals(userId)) {
             throw new AccessDeniedException(ACCESS_DENIED);
         }
 
-        BeanUtil.copyProperties(playlistDTO,playlist);
+        BeanUtil.copyProperties(playlistDTO, playlist);
         playlist.setUpdateTime(LocalDateTime.now());
         updateById(playlist);
     }
 
     @Override
-    public PageResult search(String text) throws IOException {
-        ElasticsearchClient client = EsClientUtil.getEsClient();
-
-        // 获取用户收藏歌曲列表
-        Long userId = ThreadLocalUtil.getUserId();
-        Set<Long> ids = userFavoriteMapper.getUserFavoritePlaylistIds(userId);
-
-        SearchResponse<PlaylistVO> response = client.search(s -> s
-                        .index("playlist")
-                        .query(q -> q
-                                .multiMatch(m -> m
-                                        .fields("title", "style", "userName")
-                                        .query(text)
-                                        .type(TextQueryType.Phrase)
-                                )
-                        )
-                        .highlight(h -> h
-                                .fields("title", f -> f
-                                        .preTags("<em>")
-                                        .postTags("</em>")
-                                )
-                                .fields("style", f -> f
-                                        .preTags("<em>")
-                                        .postTags("</em>")
-                                )
-                        )
-                        .size(10),  // 返回前10条
-                PlaylistVO.class
-        );
-
-        List<PlaylistVO> result=new ArrayList<>();
-        long total=0L;
-
-        // 高亮处理
-        if (response != null) {
-            total = response.hits().total().value();
-            log.info("共查询到{}条记录", total);
-
-            List<Hit<PlaylistVO>> hits = response.hits().hits();
-            for (Hit<PlaylistVO> hit : hits) {
-                Map<String, List<String>> highlight = hit.highlight();
-
-                PlaylistVO source = hit.source();
-
-                if (highlight.containsKey("title")) {
-                    source.setTitle(highlight.get("title").get(0));
-                }
-                if (highlight.containsKey("style")) {
-                    source.setStyle(highlight.get("style").get(0));
-                }
-
-                if(ids.contains(source.getPlaylistId())) {
-                    source.setIsFavorite(true);
-                }
-
-                log.info("处理后的文本：{}", source.toString());
-                result.add(source);
-
-            }
-        }
-        return new PageResult(total,result);
+    public PageResult search(String text, PageQueryDTO pageQueryDTO) throws IOException {
+        Page<Playlist> page = new Page<>(pageQueryDTO.getPageNum(), pageQueryDTO.getPageSize());
+        Page<Playlist> result = lambdaQuery().like(Playlist::getTitle, text)
+                .page(page);
+        return new PageResult(result.getTotal(), result.getRecords());
     }
 
     @Override
@@ -199,7 +150,7 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
         Long userId = ThreadLocalUtil.getUserId();
         Set<Long> ids = userFavoriteMapper.getUserFavoritePlaylistIds(userId);
         PlaylistVO playlistVO = baseMapper.selectDetailById(playlistId);
-        if(ids.contains(playlistId)) {
+        if (ids.contains(playlistId)) {
             playlistVO.setIsFavorite(true);
         }
         return playlistVO;
@@ -210,7 +161,7 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
     public Result updatePlaylistCover(Long playlistId, MultipartFile cover) {
 
         Playlist playlist = baseMapper.selectById(playlistId);
-        if (playlist == null){
+        if (playlist == null) {
             return Result.error("歌单不存在");
         }
         String coverUrl = minioTemplate.uploadFile(cover, "playlists");
@@ -224,7 +175,7 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
     @Transactional(rollbackFor = Exception.class)
     public Result deletePlaylist(Long playlistId) {
 
-        if ((playlistId== null)){
+        if ((playlistId == null)) {
             return Result.error("歌单ID不能为空");
         }
         Playlist playlist = baseMapper.selectById(playlistId);
@@ -236,7 +187,7 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
         Long userId = playlist.getUserId();
 
         // 删除歌单封面
-        if (StrUtil.isNotBlank(playlist.getCoverUrl())){
+        if (StrUtil.isNotBlank(playlist.getCoverUrl())) {
             minioTemplate.deleteFile(playlist.getCoverUrl());
         }
 
@@ -244,16 +195,16 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
 
         playlistSongMapper.delete(new LambdaQueryWrapper<PlaylistSong>().eq(PlaylistSong::getPlaylistId, playlistId));
 
-        if (baseMapper.deleteById(playlistId)==0){
+        if (baseMapper.deleteById(playlistId) == 0) {
             return Result.error("删除失败，歌单不存在");
         }
 
-        return Result.success("已删除歌单"+playlist.getTitle());
+        return Result.success("已删除歌单" + playlist.getTitle());
     }
 
     @Transactional(rollbackFor = Exception.class)
     public Result deletePlaylists(List<Long> playlistIds) {
-        if (playlistIds.isEmpty()){
+        if (playlistIds.isEmpty()) {
             return Result.error("歌单ID不能为空");
         }
 
@@ -266,23 +217,23 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
 
         commentMapper.delete(new LambdaQueryWrapper<Comment>().in(Comment::getPlaylistId, playlistIds));
 
-        if (baseMapper.deleteByIds(playlistIds)==0){
+        if (baseMapper.deleteByIds(playlistIds) == 0) {
             return Result.error("删除失败，歌单不存在");
         }
 
         List<String> playlistTiles = playlists.stream().map(Playlist::getTitle).toList();
 
-        return Result.success("已删除歌单"+playlistTiles);
+        return Result.success("已删除歌单" + playlistTiles);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public Result addPlaylistSongs(Long playlistId, List<Long> songIds) {
 
-        if (playlistId == null){
+        if (playlistId == null) {
             return Result.error("歌单ID不能为空");
         }
 
-        if (songIds.isEmpty()){
+        if (songIds.isEmpty()) {
             return Result.error("请选择添加的歌曲");
         }
 
@@ -300,7 +251,7 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
             return playlistSong;
         }).toList();
 
-        if (songList.isEmpty()){
+        if (songList.isEmpty()) {
             return Result.error("添加失败，歌曲已存在");
         }
 
@@ -309,7 +260,6 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
 
         return Result.success("添加成功");
     }
-
 
 
     @Override
@@ -334,7 +284,7 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
     @Override
     public Result<PageResult> getSongsByPlaylistId(Long playlistId, PageQueryDTO pageQueryDTO) {
 
-        if(playlistId==null) return Result.error("歌单ID不能为空",new PageResult(0L, null));
+        if (playlistId == null) return Result.error("歌单ID不能为空", new PageResult(0L, null));
         Page<Song> page = new Page<>(pageQueryDTO.getPageNum(), pageQueryDTO.getPageSize());
 
 
@@ -347,9 +297,9 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
     }
 
     @Override
-    public Result deletePlaylistSongs(Long playlistId,List<Long> songIds) {
+    public Result deletePlaylistSongs(Long playlistId, List<Long> songIds) {
         int delete = playlistSongMapper.delete(new LambdaQueryWrapper<PlaylistSong>().eq(PlaylistSong::getPlaylistId, playlistId).in(PlaylistSong::getSongId, songIds));
-        return delete==0?Result.error("批量删除失败"):Result.success("批量删除成功");
+        return delete == 0 ? Result.error("批量删除失败") : Result.success("批量删除成功");
 
     }
 

@@ -1,8 +1,11 @@
 package com.easy.controller.user;
 
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.crypto.digest.BCrypt;
 import com.easy.pojo.dto.*;
 import com.easy.pojo.vo.UserVO;
+import com.easy.result.PageResult;
 import com.easy.result.Result;
 import com.easy.service.UserService;
 import com.easy.utils.BindingResultUtil;
@@ -19,6 +22,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 
 @RestController("userUserController")
@@ -52,6 +57,8 @@ public class UserController {
         userService.register(userRegisterDTO);
         return Result.success("注册成功");
     }
+
+
 
     @GetMapping("/code/{optionType}/{email}")
     @Operation(summary = "发送验证码接口")
@@ -122,6 +129,14 @@ public class UserController {
     public Result deleteAccount(@RequestHeader("Authorization") String token) {
         userService.deleteAccount(token);
         return Result.success("注销成功");
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "搜索用户接口")
+    public Result<PageResult> search(
+            @RequestParam("username") @NotBlank(message = "搜索内容不能为空") String username,
+            @Valid PageQueryDTO pageQueryDTO) throws IOException {
+        return Result.success(userService.search(username, pageQueryDTO));
     }
 
 

@@ -49,7 +49,7 @@ public interface PlaylistService extends IService<Playlist> {
 
     void update(@Valid PlaylistDTO playlistDTO);
 
-    PageResult search(@NotBlank String text) throws IOException;
+    PageResult search(@NotBlank String text, PageQueryDTO pageQueryDTO) throws IOException;
 
 
     PlaylistVO getDetailById(Long playlistId);

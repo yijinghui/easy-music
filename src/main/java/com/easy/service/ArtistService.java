@@ -3,12 +3,14 @@ package com.easy.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.easy.pojo.dto.ArtistPageQueryDTO;
 import com.easy.pojo.dto.ArtistDTO;
+import com.easy.pojo.dto.PageQueryDTO;
 import com.easy.pojo.dto.SongDTO;
 import com.easy.pojo.entity.Artist;
 import com.easy.pojo.vo.ArtistNameVO;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -42,4 +44,5 @@ public interface ArtistService extends IService<Artist> {
     void certify(Long artistId);
 
 
+    PageResult search(@NotBlank String artistName, @Valid PageQueryDTO pageQueryDTO);
 }

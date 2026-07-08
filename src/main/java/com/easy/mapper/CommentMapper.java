@@ -36,13 +36,6 @@ public interface CommentMapper extends BaseMapper<Comment> {
     List<CommentInfoVO> selectHotComment(Long songId, Long playlistId);
 
 
-    /**
-     * 评论点赞
-     * @param commentId
-     * @param likeStatus
-     */
-    @Update("update tb_comment set like_count = like_count + #{likeStatus} where id = #{commentId}")
-    void updateLikeCount(Long commentId, Integer likeStatus);
 
 
 

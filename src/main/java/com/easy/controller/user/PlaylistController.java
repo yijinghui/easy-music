@@ -35,8 +35,9 @@ public class PlaylistController {
     @Operation(summary = "搜索歌单接口")
     @GetMapping("/search")
     public Result<PageResult> search (
-            @RequestParam("text") @NotBlank(message = "搜索内容不能为空") String text) throws IOException {
-        return Result.success(playlistService.search(text));
+            @RequestParam("text") @NotBlank(message = "搜索内容不能为空") String text,
+            @Valid PageQueryDTO pageQueryDTO) throws IOException {
+        return Result.success(playlistService.search(text, pageQueryDTO));
     }
 
     @Operation(summary = "获取歌单详情接口")

@@ -48,7 +48,7 @@ public interface SongMapper extends BaseMapper<Song> {
                 WHERE id >= (
                     SELECT FLOOR(RAND() * (SELECT MAX(id) FROM tb_song))
                 )
-                LIMIT 14;
+                LIMIT 7;
             """)
     List<Song> getRandomSongs();
 

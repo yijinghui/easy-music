@@ -15,6 +15,7 @@ import com.easy.exception.AccessDeniedException;
 import com.easy.exception.BaseException;
 import com.easy.mapper.UserMapper;
 import com.easy.pojo.dto.*;
+import com.easy.pojo.entity.Artist;
 import com.easy.pojo.entity.User;
 import com.easy.pojo.vo.PlaylistInfoVO;
 import com.easy.pojo.vo.UserAdminVO;
@@ -274,6 +275,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setUsername(userRegisterDTO.getUsername());
         user.setPassword(DigestUtils.md5DigestAsHex(userRegisterDTO.getPassword().getBytes()));
         user.setUserStatus(1);
+        user.setUserAvatar("users/avatar.webp");
         save(user);
 
 
@@ -449,6 +451,21 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         removeById(userId);
 
+    }
+
+    @Override
+    public PageResult search(String username, PageQueryDTO pageQueryDTO) {
+        Page<User> page = new Page<>(pageQueryDTO.getPageNum(), pageQueryDTO.getPageSize());
+        Page<User> result = lambdaQuery().like(User::getUsername, username)
+                .page(page);
+        List<User> list = result.getRecords();
+        List<UserVO> voList = new ArrayList<>();
+        for (User user : list) {
+            UserVO userVO = new UserVO();
+            BeanUtil.copyProperties(user, userVO);
+            voList.add(userVO);
+        }
+        return new PageResult(result.getTotal(), voList);
     }
 
 }

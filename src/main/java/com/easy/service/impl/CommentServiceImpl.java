@@ -2,6 +2,7 @@ package com.easy.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
@@ -144,13 +145,15 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
     public void refreshHotComment() {
         LambdaUpdateWrapper<Comment> pw1 = new LambdaUpdateWrapper<Comment>()
                 .set(Comment::getIsHot, 0)
+                .set(Comment::getRootId, 0)
                 .lt(Comment::getLikeCount, 1000)
                 .eq(Comment::getIsHot, 1);
         update(null, pw1);
 
         List<Comment> comments = list(
-                new QueryWrapper<Comment>()
-                        .ge("create_time", LocalDateTime.now().minusDays(7))
+                new LambdaQueryWrapper<Comment >()
+                        .eq(Comment::getRootId, 0)
+                        .ge(Comment::getCreateTime, LocalDateTime.now().minusDays(7))
         );
 
         List<Long> hotIds = comments.stream()
