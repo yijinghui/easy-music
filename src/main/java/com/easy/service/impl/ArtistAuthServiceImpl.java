@@ -81,9 +81,9 @@ public class ArtistAuthServiceImpl extends ServiceImpl<ArtistAuthMapper, ArtistA
         if (id == null) {
             return Result.error("id不能为空", null);
         }
-        ArtistAuth artistAuth = baseMapper.selectById(id);
+        ArtistAuth artistAuth = getById(id);
         minioTemplate.deleteFile(artistAuth.getBusinessLicenseUrl());
-        return baseMapper.deleteById(id) > 0 ? Result.success("删除成功") : Result.error("删除失败");
+        return removeById(id) ? Result.success("删除成功") : Result.error("删除失败");
     }
 
     @Transactional(rollbackFor = Exception.class)
