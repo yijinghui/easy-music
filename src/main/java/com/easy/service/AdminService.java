@@ -1,17 +1,17 @@
 package com.easy.service;
 
 
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.easy.pojo.dto.AdminDTO;
-import com.easy.pojo.dto.AdminUpdatePasswordDTO;
-import com.easy.result.Result;
+import com.easy.pojo.entity.Admin;
 import jakarta.validation.Valid;
 
-public interface AdminService {
-    Result login(@Valid AdminDTO adminDTO);
+public interface AdminService extends IService<Admin> {
+    String login(@Valid AdminDTO adminDTO);
 
     // Result register(@Valid AdminDTO adminDTO);
 
-    Result logout(String token);
+    void logout(String token);
 
-    Result updatePassword(@Valid AdminUpdatePasswordDTO updatePasswordDTO);
+    void updatePassword(String newPassword);
 }
