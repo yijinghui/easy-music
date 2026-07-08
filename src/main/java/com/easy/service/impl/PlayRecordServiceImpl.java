@@ -27,6 +27,11 @@ public class PlayRecordServiceImpl extends ServiceImpl<PlayRecordMapper, PlayRec
     public List<Song> listByUserId() {
         Long userId = ThreadLocalUtil.getUserId();
         List<Long> ids = baseMapper.selectByUserId(userId);
+
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+
         // 2. 从歌曲表中查询歌曲信息
         return songMapper.getByIds(ids);
 
