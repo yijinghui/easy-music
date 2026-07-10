@@ -1,13 +1,8 @@
 package com.easy.controller.admin;
 
-
-
-
-
 import com.easy.annotation.LogOperation;
-import com.easy.pojo.dto.UserDTO;
 import com.easy.pojo.dto.UserPageQueryDTO;
-
+import com.easy.pojo.entity.User;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
 import com.easy.service.UserService;
@@ -27,63 +22,60 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+
+    @PostMapping("/list")
     @Operation(summary = "用户分页查询接口")
-    @PostMapping("/page")
-    public Result<PageResult> getAllUsers(@RequestBody @Valid UserPageQueryDTO userPageQueryDTO) {
-        return userService.getAllUsers(userPageQueryDTO);
-
+    public Result<PageResult> list(@RequestBody @Valid UserPageQueryDTO userPageQueryDTO) {
+        return Result.success(userService.list(userPageQueryDTO));
     }
 
+    @PostMapping("/add")
     @Operation(summary = "用户新增接口")
-    @PostMapping("/create")
     @LogOperation
-    public Result addUser(@RequestBody @Valid UserDTO userDTO) {
-        return userService.addUser(userDTO);
+    public Result addUser(@RequestBody @Valid User user) {
+        userService.save(user);
+        return Result.success("新增成功");
     }
 
-    @Operation(summary = "根据id更新用户信息接口")
     @PutMapping("/update")
+    @Operation(summary = "根据id更新用户信息接口")
     @LogOperation
-    public Result updateUser(@RequestBody @Valid UserDTO userDTO) {
-        userService.updateUserInfo(userDTO);
-        return Result.success();
+    public Result update(@RequestBody @Valid User user) {
+        userService.updateById(user);
+        return Result.success("更新成功");
     }
 
+    @PatchMapping("/{id}/{status}")
     @Operation(summary = "更新用户状态接口")
     @LogOperation
-    @PatchMapping("/status/{id}")
-    public Result updateUserStatus(@PathVariable("id") Long userId, @PathVariable("status") Integer userStatus) {
-        return userService.updateUserStatus(userId, userStatus);
-    }
+    public Result updateStatus(@PathVariable("id") Long userId,
+                               @PathVariable("status") Integer userStatus) {
+        userService.updateStatus(userId, userStatus);
+        return Result.success("更新成功");
+       }
 
-
+    @DeleteMapping("/{id}")
     @Operation(summary = "删除用户接口")
     @LogOperation
-    @DeleteMapping("/{id}")
     public Result deleteUser(@PathVariable("id") Long userId) {
-        return userService.deleteUser(userId);
+        userService.removeById(userId);
+        return Result.success("删除成功");
     }
 
-
+    @DeleteMapping("/batch")
     @Operation(summary = "批量删除用户接口")
     @LogOperation
-    @DeleteMapping("/batch")
     public Result deleteUsers(@RequestBody List<Long> userIds) {
-        return userService.deleteUsers(userIds);
+        userService.removeByIds(userIds);
+        return Result.success("删除成功");
     }
-
 
     @PatchMapping("/avatar/{id}")
     @Operation(summary = "更新用户头像接口")
     @LogOperation
-    public Result updateUserAvatar(@PathVariable("id") Long userId,@RequestParam("avatar") MultipartFile avatar) {
-        userService.updateUserAvatar(userId,avatar);
-        return Result.success();
+    public Result updateAvatar(@PathVariable("id") Long userId,
+                               @RequestParam("avatar") MultipartFile avatar) {
+        userService.updateAvatar(userId, avatar);
+        return Result.success("更新头像成功");
     }
-
-
-
-
-
-
 }

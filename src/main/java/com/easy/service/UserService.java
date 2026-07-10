@@ -1,6 +1,8 @@
 package com.easy.service;
 
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.easy.pojo.dto.*;
+import com.easy.pojo.entity.User;
 import com.easy.pojo.vo.UserVO;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
@@ -10,16 +12,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
-public interface UserService {
-    Result<PageResult> getAllUsers(UserPageQueryDTO userPageQueryDTO);
+public interface UserService extends IService<User> {
+    PageResult list(UserPageQueryDTO userPageQueryDTO);
 
-    Result addUser(UserDTO userDTO);
 
-    Result updateUserStatus(Long userId, Integer userStatus);
+    void updateStatus(Long userId, Integer userStatus);
 
-    Result deleteUser(Long userId);
-
-    Result deleteUsers(List<Long> userIds);
 
     String loginByPassword(UserPasswordLoginDTO userLoginDTO);
 
@@ -29,7 +27,7 @@ public interface UserService {
 
     void logout();
 
-    UserVO userInfo();
+    UserVO userInfo(Long userId);
 
     void updateUserInfo(@Valid UserDTO userDTO);
 
@@ -40,7 +38,7 @@ public interface UserService {
 
     String loginByEmail(@Valid UserEmailLoginDTO userLoginDTO);
 
-    void updateUserAvatar(Long userId,MultipartFile avatar);
+    void updateAvatar(Long userId, MultipartFile avatar);
 
 
     void deleteAccount(String token);

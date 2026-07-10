@@ -1,18 +1,14 @@
 package com.easy.service;
 
-import com.easy.pojo.dto.ArtistAuditDTO;
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.easy.pojo.dto.ArtistAuthPageQueryDTO;
 import com.easy.pojo.entity.ArtistAuth;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
 
-public interface ArtistAuthService {
+public interface ArtistAuthService extends IService<ArtistAuth> {
 
-    Result<PageResult> getArtistAuth(ArtistAuthPageQueryDTO pageQueryDTO);
+    PageResult page(ArtistAuthPageQueryDTO pageQueryDTO);
 
-    Result deleteArtistAuth(Long id);
-
-    Result updateArtistAuth(ArtistAuth auth);
-
-    Result addArtistAuth(ArtistAuth auth);
+    void audit(ArtistAuth auth);
 }

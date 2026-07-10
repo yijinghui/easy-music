@@ -1,12 +1,9 @@
 package com.easy.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.easy.mapper.FollowMapper;
-import com.easy.mapper.PlayRecordMapper;
-import com.easy.mapper.UserFavoriteMapper;
-import com.easy.mapper.UserMapper;
-import com.easy.pojo.entity.Follow;
-import com.easy.pojo.entity.PlayRecord;
+import com.easy.mapper.*;
+import com.easy.pojo.entity.Playlist;
 import com.easy.pojo.entity.UserFavorite;
 import com.easy.pojo.vo.UserStatVO;
 import com.easy.result.Result;
@@ -16,7 +13,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -29,15 +25,11 @@ public class StatisticServiceImpl implements StatisticService {
 
     private final UserMapper userMapper;
 
-    private final FollowMapper followMapper;
 
     private final UserFavoriteMapper userFavoriteMapper;
 
-    private final StringRedisTemplate stringRedisTemplate;
 
-    private final PlayRecordMapper playRecordMapper;
-
-
+    private final PlaylistMapper playlistMapper;
 
 
     @Override
@@ -55,23 +47,16 @@ public class StatisticServiceImpl implements StatisticService {
                 .eq("user_id", userId)
                 .isNotNull("playlist_id"));
 
-        // 统计用户的关注数
-        Long followCount = followMapper.selectCount(new QueryWrapper<Follow>()
-                .eq("follower_id", userId)
-                .eq("status", 1)
+        // 统计用户创建的歌单数
+        Long createdPlaylistCount = playlistMapper.selectCount(new LambdaQueryWrapper<Playlist>()
+                .eq(Playlist::getUserId, userId)
         );
 
-        // 统计用户粉丝数
-        Long fansCount = followMapper.selectCount(new QueryWrapper<Follow>()
-                .eq("following_id", userId)
-                .eq("status", 1)
-        );
 
 
         userStatVO.setFavoriteSongCount(favoriteSongCount.intValue());
         userStatVO.setFavoritePlaylistCount(favoritePlaylistCount.intValue());
-        userStatVO.setFollowCount(followCount);
-        userStatVO.setFansCount(fansCount);
+        userStatVO.setCreatedPlaylistCount(createdPlaylistCount.intValue());
 
         return userStatVO;
     }

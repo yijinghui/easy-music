@@ -59,19 +59,9 @@ public class UserVO implements Serializable {
     private Integer favoritePlaylistCount;
 
     /**
-     * 用户的关注数
+     * 用户创建的歌单数
      */
-    private Long followCount;
-
-    /**
-     * 用户粉丝数
-     */
-    private Long fansCount;
-
-    /**
-     * 用户访客数
-     */
-    private Long visitorCount;
+    private Integer createdPlaylistCount;
 
 
 

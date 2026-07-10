@@ -4,45 +4,34 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.easy.pojo.dto.ArtistPageQueryDTO;
 import com.easy.pojo.dto.ArtistDTO;
 import com.easy.pojo.dto.PageQueryDTO;
-import com.easy.pojo.dto.SongDTO;
 import com.easy.pojo.entity.Artist;
-import com.easy.pojo.vo.ArtistNameVO;
 import com.easy.result.PageResult;
-import com.easy.result.Result;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 public interface ArtistService extends IService<Artist> {
     PageResult page(@Valid ArtistPageQueryDTO pageQueryDTO);
 
 
-    Result addArtist(ArtistDTO artistDTO);
+    void add(ArtistDTO artistDTO);
 
-    Result updateArtist(ArtistDTO artistDTO);
+    void update(ArtistDTO artistDTO);
 
-    Result updateArtistAvatar(Long artistId, MultipartFile avatar);
+    void updateAvatar(Long artistId, MultipartFile avatar);
 
-    Result deleteArtist(Long artistId);
+    void delete(Long artistId);
 
-    Result deleteArtists(List<Long> artistIds);
+    void deleteByIds(List<Long> artistIds);
 
-    Result<Long> getAllArtistsCount(Integer gender, String area);
+    Long getCount(Integer gender, String area);
 
-    Result<List<ArtistNameVO>> getAllArtistNames();
-
-
-
-    /**
-     * 用户端更新歌手信息（需要验证权限）
-     */
-    Result updateArtistInfo(ArtistDTO artistDTO);
-
+    List<Map<String,Object>> getNames();
 
     void certify(Long artistId);
-
 
     PageResult search(@NotBlank String artistName, @Valid PageQueryDTO pageQueryDTO);
 }

@@ -38,11 +38,12 @@ public class UserFavoriteServiceImpl extends ServiceImpl<UserFavoriteMapper, Use
 
     private final SongMapper songMapper;
     private final PlaylistMapper playlistMapper;
-    private final StringRedisTemplate stringRedisTemplate;
 
     @Override
-    public PageResult getUserFavoriteSongs(PageQueryDTO pageQueryDTO) {
-        Long userId = ThreadLocalUtil.getUserId();
+    public PageResult getUserFavoriteSongs(Long userId, PageQueryDTO pageQueryDTO) {
+        if (userId == null){
+            userId = ThreadLocalUtil.getUserId();
+        }
 
         Page<Song> page = new Page<>(pageQueryDTO.getPageNum(), pageQueryDTO.getPageSize());
         IPage<Song> songPage = songMapper.getUserFavoriteSongs(page, userId);
@@ -53,8 +54,12 @@ public class UserFavoriteServiceImpl extends ServiceImpl<UserFavoriteMapper, Use
             return new PageResult(0L, null);
         }
 
-        songs.forEach(song -> song.setIsFavorite(true));
-
+        if (userId == null) {
+            songs.forEach(song -> song.setIsFavorite(true));
+        }else  {
+            Set<Long> ids = baseMapper.getUserFavoriteSongIds(ThreadLocalUtil.getUserId());
+            songs.forEach(song -> song.setIsFavorite(ids.contains(song.getSongId())));
+        }
         return new PageResult(songPage.getTotal(), songs);
     }
 
@@ -103,8 +108,10 @@ public class UserFavoriteServiceImpl extends ServiceImpl<UserFavoriteMapper, Use
     }
 
     @Override
-    public PageResult getUserFavoritePlaylists(PageQueryDTO pageQueryDTO) {
-        Long userId = ThreadLocalUtil.getUserId();
+    public PageResult getUserFavoritePlaylists(Long userId, PageQueryDTO pageQueryDTO) {
+        if (userId == null){
+            userId = ThreadLocalUtil.getUserId();
+        }
         Page<PlaylistVO> page = new Page<>(pageQueryDTO.getPageNum(), pageQueryDTO.getPageSize());
         Page<PlaylistVO> playlistPage = playlistMapper.getUserFavoritePlaylists(page, userId);
 

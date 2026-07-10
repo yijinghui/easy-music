@@ -20,6 +20,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
@@ -94,6 +95,13 @@ public class PlaylistController {
             @PathVariable("songId") Long songId) {
         playlistService.addSong(playlistId, songId);
         return Result.success("添加歌曲成功");
+    }
+
+    @PatchMapping("/{playlistId}/cover")
+    @Operation(summary = "更新歌单封面接口")
+    public Result updateCover(@PathVariable("playlistId") Long playlistId, @RequestParam MultipartFile cover) {
+        playlistService.updateCover(playlistId,cover);
+        return Result.success("更新封面成功");
     }
 
     @Operation(summary = "从歌单删除歌曲接口")

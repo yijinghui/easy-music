@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.*;
  * @author sunpingli
  * @since 2025-01-09
  */
-@RestController
+@RestController("userCommentController")
 @RequestMapping("/comment")
 @RequiredArgsConstructor
 @Tag(name = "C端-评论相关接口")

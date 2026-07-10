@@ -7,6 +7,6 @@
         WHERE user_id = #{userId} AND is_deleted = 0
         GROUP BY song_id
         ORDER BY MAX(create_time) DESC
-        LIMIT 1000
+        LIMIT 500
     </select>
 </mapper>

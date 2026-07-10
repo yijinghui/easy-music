@@ -46,16 +46,15 @@ public class WebConfig implements WebMvcConfigurer {
 
         // 登录接口和注册接口不拦截
         registry.addInterceptor(new LoginInterceptor(stringRedisTemplate,rolePermissionManager))
-                .addPathPatterns("/admin/**","/playlist/**","/artist/**","/song/**","/comment/**","/feedback/**","/favorite/**","/room/**") // 拦截所有请求
+                .addPathPatterns("/admin/**","/playlist/**","/artist/**","/song/**","/comment/**","/favorite/**","/room/**","/user/**") // 拦截所有请求
                 .excludePathPatterns(
                         // 不拦截的请求路径（未登录也可访问）
                         "/admin/login", "/admin/logout",
                         "/banner/*",
-                        "/login/email","/login/password", "/register",
-                        "/code/*","/password/reset",
-                        "/song/recommend","/song/search",
-                        "/song/listen",
-                        "room/list"
+                        "/user/login/email","/user/login/password", "/user/register","/user/search","/user/info/{userId}",
+                        "/user/code/**","/user/password/reset",
+                        "/song/recommend", "/song/top200/week","/song/top200/month","/song/search",
+                        "/playlist/search","/playlist/{playlistId}"
                 )
                 .order(1);
 

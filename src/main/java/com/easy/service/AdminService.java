@@ -9,8 +9,6 @@ import jakarta.validation.Valid;
 public interface AdminService extends IService<Admin> {
     String login(@Valid AdminDTO adminDTO);
 
-    // Result register(@Valid AdminDTO adminDTO);
-
     void logout(String token);
 
     void updatePassword(String newPassword);

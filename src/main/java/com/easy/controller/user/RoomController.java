@@ -19,7 +19,7 @@ import java.util.List;
 /**
  * 音乐歌房控制器
  */
-@RestController
+@RestController("userRoomController")
 @RequiredArgsConstructor
 @Tag(name = "C端-音乐歌房接口")
 @RequestMapping("/room")

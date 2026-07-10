@@ -34,7 +34,7 @@ public class PlaylistPageQueryDTO extends PageQueryDTO implements Serializable {
     /**
      * 用户 id
      */
-    @Schema(description = "用户 id", example = "27")
+    @Schema(description = "用户id", example = "27")
     private Long userId;
 
 

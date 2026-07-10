@@ -15,17 +15,15 @@ import java.io.IOException;
 import java.util.List;
 
 public interface SongService extends IService<Song> {
-    Result<Long> getAllSongsCount(String style);
-
-    Result<PageResult> getAllSongs(SongPageQueryDTO pageQueryDTO);
+    PageResult list(SongPageQueryDTO pageQueryDTO);
 
     Result addSong(SongDTO songDTO);
 
     Result updateSong(SongDTO songDTO);
 
-    Result updateSongCover(Long songId, MultipartFile cover);
+    void updateCover(Long songId, MultipartFile cover);
 
-    Result updateSongAudio(Long songId, MultipartFile audio, String duration);
+    void updateAudio(Long songId, MultipartFile audio, String duration);
 
     Result deleteSong(Long songId);
 

@@ -19,6 +19,11 @@ public class PlaylistDTO implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
+     * 用户id
+     */
+    private Long userId;
+
+    /**
      * 歌单id
      */
     @Schema(description = "歌单id", example = "1")
@@ -45,9 +50,6 @@ public class PlaylistDTO implements Serializable {
     @NotBlank(message = "歌单风格不能为空")
     private String style;
 
-    @Schema(description = "歌单封面")
-    @NotBlank(message = "歌单封面不能为空")
-    private String coverUrl;
 
 
 

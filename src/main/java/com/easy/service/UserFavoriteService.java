@@ -9,13 +9,13 @@ import com.easy.result.Result;
 
 public interface UserFavoriteService extends IService<UserFavorite> {
 
-    PageResult getUserFavoriteSongs(PageQueryDTO pageQueryDTO);
+    PageResult getUserFavoriteSongs(Long userId, PageQueryDTO pageQueryDTO);
 
     void collectSong(Long songId);
 
     void cancelCollectSong(Long songId);
 
-    PageResult getUserFavoritePlaylists(PageQueryDTO pageQueryDTO);
+    PageResult getUserFavoritePlaylists(Long userId, PageQueryDTO pageQueryDTO);
 
     void collectPlaylist(Long playlistId);
 

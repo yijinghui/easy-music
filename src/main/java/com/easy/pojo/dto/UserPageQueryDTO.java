@@ -7,22 +7,16 @@ import java.io.Serial;
 import java.io.Serializable;
 
 @Data
-public class UserPageQueryDTO implements Serializable {
+public class UserPageQueryDTO extends PageQueryDTO implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
     /**
-     * 页码
+     * 用户id
      */
-    @NotNull
-    private Integer pageNum;
+    private Long userId;
 
-    /**
-     * 每页数量
-     */
-    @NotNull
-    private Integer pageSize;
 
     /**
      * 用户名

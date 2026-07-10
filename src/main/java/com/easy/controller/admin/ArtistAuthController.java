@@ -6,12 +6,12 @@ import com.easy.pojo.entity.ArtistAuth;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
 import com.easy.service.ArtistAuthService;
-import com.minio.MinioTemplate;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 
 @RestController
@@ -22,40 +22,33 @@ public class ArtistAuthController {
 
     private final ArtistAuthService artistAuthService;
 
-    private final MinioTemplate minioTemplate;
 
     @Operation(summary = "分页查询歌手认证记录")
-    @PostMapping("/records")
-    public Result<PageResult> getArtistAuth(@RequestBody ArtistAuthPageQueryDTO pageQueryDTO) {
-        return artistAuthService.getArtistAuth(pageQueryDTO);
+    @GetMapping
+    public Result<PageResult> page(@Valid ArtistAuthPageQueryDTO pageQueryDTO) {
+            return Result.success(artistAuthService.page(pageQueryDTO));
     }
 
     @Operation(summary = "认证记录删除接口")
-    @DeleteMapping("/records/{id}")
-    public Result deleteArtistAuth(@PathVariable Long id) {
-        return artistAuthService.deleteArtistAuth(id);
+    @DeleteMapping("/{id}")
+    @LogOperation
+    public Result<String>delete(@PathVariable Long id) {
+        artistAuthService.removeById(id);
+        return Result.success("删除成功");
     }
 
     @Operation(summary = "认证记录编辑/审核接口")
-    @PutMapping("/records")
+    @PutMapping
     @LogOperation
-    public Result updateArtistAuth(@RequestBody ArtistAuth auth) {
-        return artistAuthService.updateArtistAuth(auth);
+    public Result audit(@RequestBody @Validated ArtistAuth auth) {
+        artistAuthService.audit(auth);
+        return Result.success("处理成功");
     }
 
     @Operation(summary = "认证记录新增接口")
-    @PostMapping("/records/create")
-    public Result addArtistAuth(@RequestBody ArtistAuth auth) {
-        return artistAuthService.addArtistAuth(auth);
+    @PostMapping("/create")
+    public Result add(@RequestBody @Validated ArtistAuth auth) {
+        artistAuthService.save(auth);
+        return Result.success("新增成功");
     }
-    @Operation(summary = "营业执照上传接口")
-    @PostMapping("/business-license/upload")
-    public Result uploadBusinessLicense(@RequestBody MultipartFile businessLicense) {
-        String businessLicenseUrl = minioTemplate.uploadFile(businessLicense, "businessLicense");
-        return Result.success("上传成功",businessLicenseUrl);
-    }
-
-
-
-
 }

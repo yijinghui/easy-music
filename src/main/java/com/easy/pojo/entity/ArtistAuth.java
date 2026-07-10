@@ -28,10 +28,6 @@ public class ArtistAuth {
      */
     private Long artistId;
 
-    /**
-     * 认证资料（营业执照URL等）
-     */
-    private String businessLicenseUrl;
 
     /**
      * 审核状态：0-待审核，1-已通过，2-已拒绝，3-已取消

@@ -1,17 +1,12 @@
 package com.easy.controller.user;
 
 
-import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.crypto.digest.BCrypt;
 import com.easy.pojo.dto.*;
 import com.easy.pojo.vo.UserVO;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
 import com.easy.service.UserService;
-import com.easy.utils.BindingResultUtil;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -19,7 +14,6 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,6 +22,7 @@ import java.io.IOException;
 
 @RestController("userUserController")
 @RequiredArgsConstructor
+@RequestMapping("/user")
 @Tag(name = "C端-用户相关接口")
 public class UserController {
 
@@ -82,7 +77,14 @@ public class UserController {
     @GetMapping("/me")
     @Operation(summary = "获取用户信息接口")
     public Result<UserVO> getUserInfo() {
-        UserVO userVO = userService.userInfo();
+        UserVO userVO = userService.userInfo(null);
+        return Result.success(userVO);
+    }
+
+    @GetMapping("/info/{userId}")
+    @Operation(summary = "获取用户信息接口")
+    public Result<UserVO> getUserInfo(@PathVariable Long userId) {
+        UserVO userVO = userService.userInfo(userId);
         return Result.success(userVO);
     }
 
@@ -112,7 +114,7 @@ public class UserController {
     @PatchMapping("/avatar")
     @Operation(summary = "更新用户头像接口")
     public Result updateUserAvatar(@RequestParam MultipartFile avatar) {
-        userService.updateUserAvatar(null,avatar);
+        userService.updateAvatar(null,avatar);
         return Result.success("更新成功");
     }
 

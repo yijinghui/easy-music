@@ -2,12 +2,13 @@ package com.easy.controller.admin;
 
 import com.easy.annotation.LogOperation;
 import com.easy.pojo.dto.*;
+import com.easy.pojo.entity.Playlist;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
 import com.easy.service.PlaylistService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,33 +25,32 @@ public class  PlaylistController {
 
     @Operation(summary = "获取所有歌单数量接口")
     @GetMapping("/count")
-    public Result<Long> getAllPlaylistsCount(
-            @Parameter(description = "歌单风格", example = "null")
-            @RequestParam(required = false) String style) {
-        return playlistService.getAllPlaylistsCount(style);
+    public Result<Long> getCount() {
+        return Result.success(
+                playlistService.getBaseMapper().selectCount(null));
     }
 
 
     @Operation(summary = "歌单分页查询接口")
-    @PostMapping("/page")
-    public Result<PageResult> getAllPlaylists(@RequestBody PlaylistPageQueryDTO pageQueryDTO) {
-        return playlistService.getAllPlaylists(pageQueryDTO);
+    @PostMapping("/list")
+    public Result<PageResult> list(@RequestBody PlaylistPageQueryDTO pageQueryDTO) {
+        return Result.success(playlistService.list(pageQueryDTO));
     }
 
     @Operation(summary = "新增歌单接口")
-    @PostMapping("/create")
+    @PostMapping("/add")
     @LogOperation
-    public Result addPlaylist(@RequestBody PlaylistDTO playlistDTO) {
-        playlistService.create(playlistDTO);
-        return Result.success();
+    public Result add(@RequestBody Playlist playlist) {
+        playlistService.save(playlist);
+        return Result.success("新增成功");
     }
 
     @Operation(summary = "批量新增歌单歌曲接口")
     @PostMapping("/songs/{playlistId}")
     @LogOperation
-    public Result addPlaylistSongs(@PathVariable Long playlistId,@RequestParam List<Long> songIds) {
-        playlistService.addPlaylistSongs(playlistId,songIds);
-        return Result.success();
+    public Result addSongs(@PathVariable Long playlistId, @RequestParam List<Long> songIds) {
+        playlistService.addSongs(playlistId,songIds);
+        return Result.success("新增成功");
     }
 
 
@@ -58,38 +58,35 @@ public class  PlaylistController {
     @Operation(summary = "更新歌单信息接口")
     @PutMapping("/update")
     @LogOperation
-    public Result updatePlaylist(@RequestBody PlaylistDTO playlistDTO) {
-        return playlistService.updatePlaylist(playlistDTO);
+    public Result update(@RequestBody Playlist playlist) {
+        playlistService.updateById(playlist);
+        return Result.success("更新成功");
     }
 
     @Operation(summary = "更新歌单封面接口")
     @PatchMapping("/cover/{id}")
     @LogOperation
-    public Result updatePlaylistCover(@PathVariable("id") Long playlistId, @RequestParam("cover") MultipartFile cover) {
-
-        return playlistService.updatePlaylistCover(playlistId, cover);
+    public Result updateCover(@PathVariable("id") Long playlistId,
+                              @RequestParam("cover") @NotBlank(message = "封面不能为空") MultipartFile cover) {
+        playlistService.updateCover(playlistId, cover);
+        return Result.success("更新成功");
     }
 
 
     @Operation(summary = "删除歌单接口")
     @DeleteMapping("/{id}")
     @LogOperation
-    public Result deletePlaylist(@PathVariable("id") Long playlistId) {
-        return playlistService.deletePlaylist(playlistId);
+    public Result delete(@PathVariable("id") Long playlistId) {
+        playlistService.delete(playlistId);
+        return Result.success("删除成功");
     }
 
-    @Operation(summary = "批量删除歌单接口")
-    @DeleteMapping("/batch")
-    @LogOperation
-    public Result deletePlaylists(@RequestBody List<Long> playlistIds) {
-        return playlistService.deletePlaylists(playlistIds);
-    }
-
-    @Operation(summary = "批量删除歌单接口")
+    @Operation(summary = "批量删除歌单歌曲接口")
     @DeleteMapping("/songs/{id}")
     @LogOperation
-    public Result deletePlaylistSongs(@PathVariable ("id") Long playlistId ,@RequestBody List<Long> songIds) {
-        return playlistService.deletePlaylistSongs(playlistId,songIds);
+    public Result deleteSongs(@PathVariable ("id") Long playlistId ,@RequestBody List<Long> songIds) {
+        playlistService.deleteSongs(playlistId,songIds);
+        return Result.success("批量删除成功");
     }
 
 

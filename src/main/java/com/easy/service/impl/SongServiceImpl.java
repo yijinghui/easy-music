@@ -1,6 +1,7 @@
 package com.easy.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
@@ -34,6 +35,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.swing.text.Style;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -53,10 +55,8 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
     private static final int RECOMMEND_POOL_SIZE = 80;
     private static final String RECOMMEND_REDIS_KEY_PREFIX = "recommended_songs:";
 
-    private final StyleMapper styleMapper;
     private final UserMapper userMapper;
 
-    private final GenreMapper genreMapper;
 
     private final UserFavoriteMapper userFavoriteMapper;
 
@@ -67,31 +67,25 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
     private final PlaylistMapper playlistMapper;
     private final ArtistMapper artistMapper;
 
-    @Override
-    public Result<Long> getAllSongsCount(String style) {
-
-        LambdaQueryWrapper<Song> queryWrapper = new LambdaQueryWrapper<Song>()
-                .like(Song::getStyle, style);
-
-        return Result.success(baseMapper.selectCount(queryWrapper));
-    }
 
     @Override
-    public Result<PageResult> getAllSongs(SongPageQueryDTO pageQueryDTO) {
+    public PageResult list(SongPageQueryDTO pageQueryDTO) {
 
         Page<Song> page = new Page<>(pageQueryDTO.getPageNum(), pageQueryDTO.getPageSize());
         String style = pageQueryDTO.getStyle();
         Long artistId = pageQueryDTO.getArtistId();
         String songName = pageQueryDTO.getSongName();
         String album = pageQueryDTO.getAlbum();
-        Long id = pageQueryDTO.getId();
-        IPage<Song> songPage = baseMapper.getAllSongs(page, artistId, style, songName, id, album);
+        Long songId = pageQueryDTO.getId();
 
-        if (songPage.getRecords().isEmpty()) {
-            return Result.success("未找到相关数据", new PageResult(0L, null));
-        }
+        Page<Song> result = lambdaQuery().eq(StrUtil.isNotBlank(style), Song::getStyle, style)
+                .eq(artistId != null, Song::getArtistId, artistId)
+                .like(StrUtil.isNotBlank(songName), Song::getSongName, songName)
+                .like(StrUtil.isNotBlank(album), Song::getAlbum, album)
+                .eq(songId != null, Song::getSongId, songId)
+                .page(page);
+        return new PageResult(result.getTotal(), result.getRecords());
 
-        return Result.success(new PageResult(songPage.getTotal(), songPage.getRecords()));
     }
 
 
@@ -105,8 +99,6 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
         Long songId = song.getSongId();
         String style = song.getStyle();
 
-        // 获取歌曲所有风格
-        handleStyleUpdate(style, songId);
 
         return Result.success("添加成功");
 
@@ -124,48 +116,30 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
             return Result.error("歌曲不存在");
         }
 
-        String oldStyle = songDB.getStyle();
         String newStyle = song.getStyle();
         Long songId = song.getSongId();
 
         BeanUtil.copyProperties(song, songDB);
 
         baseMapper.updateById(songDB);
-
-        if (newStyle == null) {
-            // 删除歌曲-风格
-            genreMapper.delete(new QueryWrapper<Genre>().eq("song_id", songId));
-            return Result.success("更新成功");
-        }
-
-        if (oldStyle.equals(newStyle)) {
-            return Result.success("更新成功");
-        }
-
-        genreMapper.delete(new QueryWrapper<Genre>().eq("song_id", songId));
-        handleStyleUpdate(newStyle, songId);
         return Result.success("更新成功");
 
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public Result updateSongCover(Long songId, MultipartFile cover) {
+    public void updateCover(Long songId, MultipartFile cover) {
         String coverUrl = minIOService.uploadFile(cover, "songCovers");
-
         // 查询目标歌曲是否存在
         Song songDB = baseMapper.selectById(songId);
         if (songDB == null) {
-            return Result.error("歌曲不存在");
+            throw new IllegalArgumentException("歌曲不存在");
         }
         songDB.setCoverUrl(coverUrl);
         baseMapper.updateById(songDB);
-
-        return Result.success("更新成功");
-
     }
 
     @Override
-    public Result updateSongAudio(Long songId, MultipartFile audio, String duration) {
+    public void updateAudio(Long songId, MultipartFile audio, String duration) {
         String audioUrl = minIOService.uploadFile(audio, "songAudios");
 
         // 查询目标歌曲是否存在
@@ -173,23 +147,16 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
         song.setSongId(songId);
         song.setAudioUrl(audioUrl);
         song.setDuration(duration);
-        if (baseMapper.updateById(song) == 0) {
-            return Result.error("歌曲不存在");
-        }
-        ;
+        save(song);
 
-        return Result.success("已更新歌曲" + songId);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public Result deleteSong(Long songId) {
 
-        genreMapper.delete(new QueryWrapper<Genre>().eq("song_id", songId));
 
         Song songDB = baseMapper.selectById(songId);
 
-        // 删除歌曲、歌曲封面
-        handleCoverAndAudioDelete(songDB);
 
 
         if (baseMapper.deleteById(songId) == 0) {
@@ -204,9 +171,6 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
 
         List<Song> songList = baseMapper.selectByIds(songIds);
         List<String> songNames = songList.stream().map(Song::getSongName).toList();
-        for (Song song : songList) {
-            handleCoverAndAudioDelete(song);
-        }
         if (baseMapper.delete(new QueryWrapper<Song>().in("song_id", songIds)) == 0) {
             return Result.error("歌曲不存在");
         }
@@ -519,62 +483,6 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
         return candidateSongs;
     }
 
-
-
-    private void handleCoverAndAudioDelete(Song song) {
-        // 删除歌曲、歌曲封面
-        String coverUrl = song.getCoverUrl();
-        String audioUrl = song.getAudioUrl();
-
-        if (coverUrl != null && !coverUrl.isEmpty()) {
-            minIOService.deleteFile(song.getCoverUrl());
-        }
-
-        if (audioUrl != null && !audioUrl.isEmpty()) {
-            minIOService.deleteFile(song.getAudioUrl());
-        }
-    }
-
-
-    private void handleStyleUpdate(String style, Long songId) {
-
-        if (style == null || style.isEmpty() || songId == null) {
-            return;
-        }
-
-        List<String> styleNameList = List.of(style.split(","));
-        List<Style> styles = styleNameList.stream().map(s -> new Style(null, s)).toList();
-
-        // 查询已存在的音乐风格
-        QueryWrapper<Style> queryWrapper = new QueryWrapper<Style>()
-                .in("name", styleNameList);
-        List<Style> existStyleList = styleMapper.selectList(queryWrapper);
-        Set<String> existStyleNameSet = existStyleList.stream().map(Style::getName).collect(Collectors.toSet());
-
-        // 获取所有风格id
-        List<Long> styleIdList = new ArrayList<>(existStyleList.stream().map(Style::getStyleId).toList());
-
-        // 获取所有不存在的风格
-        List<Style> notExistStyleList = styles.stream()
-                .filter(s -> !existStyleNameSet.contains(s.getName()))
-                .toList();
-
-        // 若风格不存在则新增音乐风格（添加空集合判断）
-        if (!notExistStyleList.isEmpty()) {
-            styleMapper.insertBatch(notExistStyleList);
-            for (Style notExistStyle : notExistStyleList) {
-                styleIdList.add(notExistStyle.getStyleId());
-            }
-        }
-
-        // 新增歌曲-风格（也需要判断）
-        if (!styleIdList.isEmpty()) {
-            List<Genre> genreList = styleIdList.stream()
-                    .map(styleId -> new Genre(songId, styleId))
-                    .toList();
-            genreMapper.insertBatch(genreList);
-        }
-    }
 
 }
 

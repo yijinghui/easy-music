@@ -1,10 +1,12 @@
 package com.easy.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.easy.pojo.dto.CommentPageQueryDTO;
 import com.easy.pojo.dto.CommentScrollQueryDTO;
 import com.easy.pojo.dto.CommentDTO;
 import com.easy.pojo.entity.Comment;
 import com.easy.pojo.vo.CommentInfoVO;
+import com.easy.result.PageResult;
 import com.easy.result.Result;
 import com.easy.result.ScrollResult;
 
@@ -15,9 +17,9 @@ public interface CommentService extends IService<Comment> {
 
     void delete(Long commentId);
 
-    ScrollResult list(Long songId,
-                                     Long playlistId,
-                                     CommentScrollQueryDTO queryDTO);
+    ScrollResult list(Long songId,Long playlistId,CommentScrollQueryDTO queryDTO);
 
     void refreshHotComment();
+
+    PageResult pageComments(CommentPageQueryDTO pageQueryDTO);
 }

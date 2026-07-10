@@ -15,31 +15,16 @@ import java.io.IOException;
 import java.util.List;
 
 public interface PlaylistService extends IService<Playlist> {
-    Result<Long> getAllPlaylistsCount(String style);
 
-    Result<PageResult> getAllPlaylists(PlaylistPageQueryDTO pageQueryDTO);
+    PageResult list(PlaylistPageQueryDTO pageQueryDTO);
 
     void create(PlaylistDTO playlistDTO);
 
-    Result updatePlaylist(PlaylistDTO playlistDTO);
+    void addSongs(Long playlistId, List<Long> songIds);
 
-    Result updatePlaylistCover(Long playlistId, MultipartFile cover);
-
-    Result deletePlaylist(Long playlistId);
-
-    Result deletePlaylists(List<Long> playlistIds);
-
-    Result addPlaylistSongs(Long playlistId, List<Long> songIds);
-
-    List<Playlist>  getPlaylistInfo(Long userId);
-
-    Result<PageResult> getSongsByPlaylistId(Long playlistId, PageQueryDTO pageQueryDTO);
-
-    Result deletePlaylistSongs(Long playlistId,List<Long> songIds);
+    void deleteSongs(Long playlistId, List<Long> songIds);
 
     void delete(Long playlistId);
-
-    Result updatePlaylistByUser(PlaylistDTO playlistDTO, Long userId);
 
     void addSong(Long playlistId, Long songId);
 
@@ -51,6 +36,8 @@ public interface PlaylistService extends IService<Playlist> {
 
     PageResult search(@NotBlank String text, PageQueryDTO pageQueryDTO) throws IOException;
 
-
     PlaylistVO getDetailById(Long playlistId);
+
+    void updateCover(Long playlistId, MultipartFile cover);
+
 }

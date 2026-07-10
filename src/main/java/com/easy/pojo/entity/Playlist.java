@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
@@ -46,7 +47,7 @@ public class Playlist implements Serializable {
      * 歌单封面
      */
     @TableField("cover_url")
-    private String coverUrl;
+    private String coverUrl = "playlists/playlist_default.webp";
 
     /**
      * 歌单简介

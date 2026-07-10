@@ -2,6 +2,7 @@ package com.easy.service;
 
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.easy.pojo.dto.PageQueryDTO;
 import com.easy.pojo.entity.Banner;
 import com.easy.pojo.vo.BannerVO;
 import com.easy.result.PageResult;
@@ -21,25 +22,19 @@ import java.util.List;
 public interface BannerService extends IService<Banner> {
 
     // 获取轮播图列表
-    Result<PageResult> getAllBanners(Integer bannerStatus);
+    PageResult page(PageQueryDTO pageQueryDTO);
 
     // 添加轮播图
-    Result addBanner(MultipartFile  banner);
-
-    // 更新轮播图
-    Result updateBanner(Long bannerId, MultipartFile  banner);
+    void add(MultipartFile  banner);
 
     // 更新轮播图状态
-    Result updateBannerStatus(Long bannerId, Integer bannerStatus);
+    void updateStatus(Long bannerId, Integer bannerStatus);
 
     // 删除轮播图
-    Result deleteBanner(Long bannerId);
+    void delete(Long bannerId);
 
     // 批量删除轮播图
-    Result deleteBanners(List<Long> bannerIds);
-
-    // 获取轮播图列表（用户端）
-    List<BannerVO> getBannerList();
+    void deleteByIds(List<Long> bannerIds);
 
     List<Banner> listActiveBanners();
 }

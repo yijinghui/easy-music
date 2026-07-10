@@ -2,10 +2,13 @@ package com.easy.service.impl;
 
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.easy.constant.MessageConstant;
 import com.easy.enumeration.BannerStatusEnum;
 import com.easy.mapper.BannerMapper;
+import com.easy.pojo.dto.PageQueryDTO;
 import com.easy.pojo.entity.Banner;
 import com.easy.pojo.vo.BannerVO;
 import com.easy.result.PageResult;
@@ -33,60 +36,23 @@ public class BannerServiceImpl extends ServiceImpl<BannerMapper, Banner> impleme
 
 
     @Override
-    public Result<PageResult> getAllBanners(Integer bannerStatus) {
-
-        QueryWrapper<Banner> queryWrapper = new QueryWrapper<>();
-        queryWrapper.lambda()
-                .eq(bannerStatus!=null,Banner::getBannerStatus, bannerStatus);
-        // 倒序排序
-        queryWrapper.orderByDesc("id");
-
-        List<Banner> banners = baseMapper.selectList(queryWrapper);
-        if (banners.isEmpty()) {
-            return Result.success(MessageConstant.DATA_NOT_FOUND, new PageResult(0L, null));
-        }
-
-        return Result.success(new PageResult((long) banners.size(), banners));
+    public PageResult page(PageQueryDTO pageQueryDTO) {
+        IPage<Banner> page = new Page<>(pageQueryDTO.getPageNum(), pageQueryDTO.getPageSize());
+        lambdaQuery().page(page);
+        return new PageResult(page.getTotal(), page.getRecords());
     }
 
 
     @Override
     @CacheEvict(cacheNames = "bannerCache", allEntries = true)
     @Transactional(rollbackFor = Exception.class)
-    public Result addBanner(MultipartFile banner) {
-
+    public void add(MultipartFile banner) {
         String bannerUrl = minioTemplate.uploadFile(banner, "banner");
-
         Banner b = new Banner();
         b.setBannerUrl(bannerUrl).setBannerStatus(1);
-
-        if (baseMapper.insert(b) == 0) {
-            return Result.error(MessageConstant.ADD + MessageConstant.FAILED);
-        }
-        return Result.success(MessageConstant.ADD + MessageConstant.SUCCESS);
+        save(b);
     }
 
-
-    @Override
-    @CacheEvict(cacheNames = "bannerCache", allEntries = true)
-    @Transactional(rollbackFor = Exception.class)
-    public Result updateBanner(Long bannerId, MultipartFile banner) {
-
-        String bannerUrl = minioTemplate.uploadFile(banner, "banner");
-
-        Banner b = baseMapper.selectById(bannerId);
-        String oldBannerUrl = b.getBannerUrl();
-        if (oldBannerUrl != null && !oldBannerUrl.isEmpty()) {
-            minioTemplate.deleteFile(oldBannerUrl);
-        }
-
-        b.setBannerUrl(bannerUrl);
-        if (baseMapper.updateById(b) == 0) {
-            return Result.error(MessageConstant.UPDATE + MessageConstant.FAILED);
-        }
-
-        return Result.success(MessageConstant.UPDATE + MessageConstant.SUCCESS);
-    }
 
     /**
      * 更新轮播图状态
@@ -97,18 +63,11 @@ public class BannerServiceImpl extends ServiceImpl<BannerMapper, Banner> impleme
      */
     @Override
     @CacheEvict(cacheNames = "bannerCache", allEntries = true)
-    public Result updateBannerStatus(Long bannerId, Integer bannerStatus) {
-
-
-
+    public void updateStatus(Long bannerId, Integer bannerStatus) {
         // 更新轮播图状态
         Banner banner = new Banner();
         banner.setBannerId(bannerId).setBannerStatus(bannerStatus);
-
-        if (baseMapper.updateById(banner) == 0) {
-            return Result.error(MessageConstant.UPDATE + MessageConstant.FAILED);
-        }
-        return Result.success(MessageConstant.UPDATE + MessageConstant.SUCCESS);
+        baseMapper.updateById(banner);
 
     }
 
@@ -119,21 +78,17 @@ public class BannerServiceImpl extends ServiceImpl<BannerMapper, Banner> impleme
      */
     @Override
     @CacheEvict(cacheNames = "bannerCache", allEntries = true)
-    public Result deleteBanner(Long bannerId) {
+    public void delete(Long bannerId) {
 
         Banner banner = baseMapper.selectById(bannerId);
         if (banner == null) {
-            return Result.error(MessageConstant.DATA_NOT_FOUND);
+            return;
         }
         String bannerUrl = banner.getBannerUrl();
         if (bannerUrl != null && !bannerUrl.isEmpty()) {
             minioTemplate.deleteFile(bannerUrl);
         }
-
-        if (baseMapper.deleteById(bannerId) == 0) {
-            return Result.error(MessageConstant.DELETE + MessageConstant.FAILED);
-        }
-        return Result.success(MessageConstant.DELETE + MessageConstant.SUCCESS);
+        removeById(bannerId);
     }
 
     /**
@@ -144,25 +99,19 @@ public class BannerServiceImpl extends ServiceImpl<BannerMapper, Banner> impleme
      */
     @Override
     @CacheEvict(cacheNames = "bannerCache", allEntries = true)
-    public Result deleteBanners(List<Long> bannerIds) {
-
-
+    public void deleteByIds(List<Long> bannerIds) {
         List<Banner> banners = baseMapper.selectByIds(bannerIds);
+        if (banners.isEmpty()) {
+            return;
+        }
         List<String> bannerUrlList = banners.stream()
                 .map(Banner::getBannerUrl)
                 .filter(url -> url != null && !url.isEmpty())
                 .toList();
-        bannerUrlList.forEach(url -> minioTemplate.deleteFile(url));
+        bannerUrlList.forEach(minioTemplate::deleteFile);
 
-        if (baseMapper.deleteByIds(bannerIds) == 0) {
-            return Result.error(MessageConstant.DELETE + MessageConstant.FAILED);
-        }
-        return Result.success(MessageConstant.DELETE + MessageConstant.SUCCESS);
-    }
+        removeByIds(bannerIds);
 
-    @Override
-    public List<BannerVO> getBannerList() {
-        return List.of();
     }
 
     @Override

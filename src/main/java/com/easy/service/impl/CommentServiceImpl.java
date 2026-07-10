@@ -6,13 +6,17 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.easy.exception.AccessDeniedException;
 import com.easy.mapper.CommentMapper;
+import com.easy.pojo.dto.CommentPageQueryDTO;
 import com.easy.pojo.dto.CommentScrollQueryDTO;
 import com.easy.pojo.dto.CommentDTO;
 import com.easy.pojo.entity.Comment;
 import com.easy.pojo.vo.CommentInfoVO;
+import com.easy.result.PageResult;
 import com.easy.result.ScrollResult;
 import com.easy.service.CommentService;
 import com.easy.utils.SensitiveWordUtil;
@@ -167,6 +171,27 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
                     .in("id", hotIds);
             update(null, updateWrapper);
         }
+    }
+
+    @Override
+    public PageResult pageComments(CommentPageQueryDTO pageQueryDTO) {
+        IPage<Comment> page = new Page<>(pageQueryDTO.getPageNum(), pageQueryDTO.getPageSize());
+        Long commentId = pageQueryDTO.getCommentId();
+        Long userId = pageQueryDTO.getUserId();
+        Long songId = pageQueryDTO.getSongId();
+        Long playlistId = pageQueryDTO.getPlaylistId();
+        String content = pageQueryDTO.getContent();
+        Integer isHot = pageQueryDTO.getIsHot();
+
+        lambdaQuery().eq(songId != null, Comment::getSongId, songId)
+                .eq(userId != null, Comment::getUserId, userId)
+                .eq(commentId != null, Comment::getId, commentId)
+                .eq(playlistId != null, Comment::getPlaylistId, playlistId)
+                .eq(content != null && !content.isEmpty(), Comment::getContent, content)
+                .eq(isHot != null, Comment::getIsHot, isHot)
+                .orderByDesc(Comment::getCreateTime)
+                .list(page);
+        return new PageResult(page.getTotal(), page.getRecords());
     }
 
     // 热度计算公式

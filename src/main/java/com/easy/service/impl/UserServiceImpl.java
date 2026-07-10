@@ -61,36 +61,20 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
 
     @Override
-    public Result<PageResult> getAllUsers(UserPageQueryDTO userPageQueryDTO) {
+    public PageResult list(UserPageQueryDTO userPageQueryDTO) {
         Page<User> page = new Page<>(userPageQueryDTO.getPageNum(), userPageQueryDTO.getPageSize());
-
+        Long userId =userPageQueryDTO.getUserId();
         String username = userPageQueryDTO.getUsername();
         String phone = userPageQueryDTO.getPhone();
         Integer userStatus = userPageQueryDTO.getUserStatus();
 
-        // 1.使用LambdaQueryWrapper构建分页查询条件
-        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<User>()
+        Page<User> result = lambdaQuery().eq(userId != null, User::getUserId, userId)
                 .like(StrUtil.isNotBlank(username), User::getUsername, username)
                 .like(StrUtil.isNotBlank(phone), User::getPhone, phone)
                 .eq(userStatus != null, User::getUserStatus, userStatus)
-                .orderByDesc(User::getUserId);
-        // 2.分页查询
-        IPage<User> userPage = baseMapper.selectPage(page, queryWrapper);
-
-        // 3.判断查询结果是否为空2
-        if (userPage.getTotal() == 0){
-            return Result.success("未找到相关数据", new PageResult(0L, null));
-        }
-
-        // 4.将查询结果转换为VO
-        List<UserAdminVO> userAdminVOList = userPage.getRecords().stream()
-                .map(user -> {
-                    UserAdminVO userAdminVO = new UserAdminVO();
-                    BeanUtil.copyProperties(user, userAdminVO);
-                    return userAdminVO;
-                }).toList();
-        // 5.返回结果
-        return Result.success(new PageResult(userPage.getTotal(), userAdminVOList));
+                .orderByDesc(User::getUserId)
+                .page(page);
+        return new PageResult(result.getTotal(), result.getRecords());
 
 
     }
@@ -135,18 +119,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
 
-    public Result updateUserStatus(Long userId, Integer userStatus) {
-        User user = baseMapper.selectById(userId);
-        if (user == null){
-            return Result.error("用户不存在");
-        }
+    public void updateStatus(Long userId, Integer userStatus) {
+        User user = getById(userId);
         user.setUserStatus(userStatus);
         user.setUpdateTime(LocalDateTime.now());
-        int result = baseMapper.updateById(user);
-        if (result == 0){
-            return Result.error("用户状态更新失败");
-        }
-        return Result.success("用户状态更新成功");
+        updateById(user);
     }
 
     @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
@@ -195,7 +172,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public String loginByPassword(UserPasswordLoginDTO userLoginDTO) {
         // 根据用户名查询用户信息
         User user = getOne(new QueryWrapper<User>().eq("username", userLoginDTO.getUsername()));
-
+        if (user == null) {
+            throw new AccessDeniedException("账号不存在");
+        }
         if (user.getUserStatus() == 0){
             throw new AccessDeniedException("账号已被冻结");
         }
@@ -242,7 +221,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         claims.put(JwtClaimsConstant.USERNAME, user.getUsername());
         String token = JwtUtil.generateToken(claims);
         // 4.2.将token存入Redis
-        stringRedisTemplate.opsForValue().set("login:user:" + userId, token, 3, TimeUnit.HOURS);
+        stringRedisTemplate.opsForValue().set("login:"+RoleEnum.USER.getRole()+":" + userId, token, 3, TimeUnit.HOURS);
 
         // 5.返回结果
         return token;
@@ -313,16 +292,23 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
-    @Cacheable(cacheNames = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
-    public UserVO userInfo() {
-        Long userId = ThreadLocalUtil.getUserId();
+    @Cacheable(cacheNames = "userCache",
+            key = "'userInfo:' + (#userId != null ? #userId : T(com.easy.utils.ThreadLocalUtil).getUserId())")
+    public UserVO userInfo(Long userId) {
+
+        if (userId == null){
+            userId = ThreadLocalUtil.getUserId();
+        }
 
         User user = getById(userId);
         UserVO userVO = new UserVO();
 
         BeanUtils.copyProperties(user, userVO);
+        if (userId == null){
+            userVO.setEmail(null);
+        }
 
-        // 统计用户歌单、歌曲、收藏数
+        // 统计用户歌单创建数、歌曲收藏数、歌单创建数
         UserStatVO userStatVO = statService.getUserStat(userId);
 
         BeanUtils.copyProperties(userStatVO, userVO);
@@ -424,7 +410,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
-    public void updateUserAvatar(Long userId,MultipartFile avatar) {
+    public void updateAvatar(Long userId, MultipartFile avatar) {
         if (userId==null){
             userId = ThreadLocalUtil.getUserId();
         }

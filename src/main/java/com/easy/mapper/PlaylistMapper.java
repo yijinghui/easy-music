@@ -14,7 +14,7 @@ import java.util.List;
 @Mapper
 public interface PlaylistMapper extends BaseMapper<Playlist> {
 
-    Page<PlaylistVO> selectPageWithPlaylistInfo(Page<Playlist> page, @Param("dto") PlaylistPageQueryDTO pageQueryDTO);
+    Page<PlaylistVO> selectPageWithUsername(Page<Playlist> page, @Param("dto") PlaylistPageQueryDTO pageQueryDTO);
 
 
     List<PlaylistInfoVO> selectPlaylistInfo(Long userId);
