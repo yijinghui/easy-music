@@ -17,17 +17,10 @@ import java.util.List;
 public interface SongService extends IService<Song> {
     PageResult list(SongPageQueryDTO pageQueryDTO);
 
-    Result addSong(SongDTO songDTO);
-
-    Result updateSong(SongDTO songDTO);
-
     void updateCover(Long songId, MultipartFile cover);
 
     void updateAudio(Long songId, MultipartFile audio, String duration);
 
-    Result deleteSong(Long songId);
-
-    Result deleteSongs(List<Long> songIds);
 
     List<Song> getRecommendedSongs();
 
@@ -41,5 +34,7 @@ public interface SongService extends IService<Song> {
 
     void add(@Valid SongDTO songDTO);
 
-    PageResult listSongByPlaylistId(@NotBlank Long playlistId, PageQueryDTO pageQueryDTO);
+    PageResult listSongByPlaylistId(Long playlistId, PageQueryDTO pageQueryDTO);
+
+    PageResult listSongByArtistId(Long artistId, PageQueryDTO pageQueryDTO);
 }

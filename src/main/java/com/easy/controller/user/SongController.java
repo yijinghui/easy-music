@@ -58,9 +58,9 @@ public class SongController {
 
     @GetMapping("/top200/month")
     @Operation(summary = "获取月榜Top200歌曲接口")
-    public List<Song> getTop200SongByMonth(
+    public Result<List<Song>> getTop200SongByMonth(
             @RequestParam @NotNull(message = "查询时间范围不能为空") Integer offset) {
-        return songService.getTop200SongsByMonth(offset);
+        return Result.success(songService.getTop200SongsByMonth(offset));
     }
 
     @PostMapping("/listen/{songId}")
@@ -75,6 +75,14 @@ public class SongController {
     @GetMapping("/playlist/{playlistId}")
     public Result<PageResult> getSongsByPlaylistId(@PathVariable Long playlistId,PageQueryDTO pageQueryDTO) {
         PageResult pageResult = songService.listSongByPlaylistId(playlistId,pageQueryDTO);
+        return Result.success(pageResult);
+    }
+
+
+    @Operation(summary = "获取歌手歌曲内容")
+    @GetMapping("/artist/{artistId}")
+    public Result<PageResult> getSongsByArtistId(@PathVariable Long artistId,PageQueryDTO pageQueryDTO) {
+        PageResult pageResult = songService.listSongByArtistId(artistId,pageQueryDTO);
         return Result.success(pageResult);
     }
 

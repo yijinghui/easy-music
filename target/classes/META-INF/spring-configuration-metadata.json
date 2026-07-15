@@ -1,16 +1,57 @@
 {
   "groups": [
     {
+      "name": "meilisearch",
+      "type": "com.easy.config.MeilisearchProperties",
+      "sourceType": "com.easy.config.MeilisearchConfig",
+      "sourceMethod": "meilisearchProperties()"
+    },
+    {
       "name": "role-path-permissions",
       "type": "com.easy.config.RolePathPermissionsConfig",
       "sourceType": "com.easy.config.RolePathPermissionsConfig"
+    },
+    {
+      "name": "spring.data.redis",
+      "type": "com.easy.config.RedisProperties",
+      "sourceType": "com.easy.config.RedisProperties"
     }
   ],
   "properties": [
     {
+      "name": "meilisearch.host-url",
+      "type": "java.lang.String",
+      "sourceType": "com.easy.config.MeilisearchProperties"
+    },
+    {
+      "name": "meilisearch.master-key",
+      "type": "java.lang.String",
+      "sourceType": "com.easy.config.MeilisearchProperties"
+    },
+    {
       "name": "role-path-permissions.permissions",
       "type": "java.util.Map<java.lang.String,java.util.List<java.lang.String>>",
       "sourceType": "com.easy.config.RolePathPermissionsConfig"
+    },
+    {
+      "name": "spring.data.redis.database",
+      "type": "java.lang.Integer",
+      "sourceType": "com.easy.config.RedisProperties"
+    },
+    {
+      "name": "spring.data.redis.host",
+      "type": "java.lang.String",
+      "sourceType": "com.easy.config.RedisProperties"
+    },
+    {
+      "name": "spring.data.redis.password",
+      "type": "java.lang.String",
+      "sourceType": "com.easy.config.RedisProperties"
+    },
+    {
+      "name": "spring.data.redis.port",
+      "type": "java.lang.Integer",
+      "sourceType": "com.easy.config.RedisProperties"
     }
   ],
   "hints": []

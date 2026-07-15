@@ -20,6 +20,24 @@ public class UserEmailUpdateDTO implements Serializable {
      * 用户邮箱
      */
     @Email(message = MessageConstant.EMAIL + MessageConstant.FORMAT_ERROR)
+    @Schema(description = "旧邮箱",  example = "480395924@qq.com")
+    private String oldEmail;
+
+    /**
+     * 验证码
+     * 验证码格式：6位字符（大小写字母、数字）
+     */
+    @NotBlank(message = MessageConstant.VERIFICATION_CODE + MessageConstant.NOT_NULL)
+    @Pattern(regexp = "^[0-9a-zA-Z]{6}$", message = MessageConstant.VERIFICATION_CODE + MessageConstant.FORMAT_ERROR)
+    @Schema(description = "验证码", example = "123456")
+    private String oldVerificationCode;
+
+
+
+    /**
+     * 用户邮箱
+     */
+    @Email(message = MessageConstant.EMAIL + MessageConstant.FORMAT_ERROR)
     @Schema(description = "用户邮箱", example = "480395924@qq.com")
     private String newEmail;
 
@@ -30,5 +48,5 @@ public class UserEmailUpdateDTO implements Serializable {
     @NotBlank(message = MessageConstant.VERIFICATION_CODE + MessageConstant.NOT_NULL)
     @Pattern(regexp = "^[0-9a-zA-Z]{6}$", message = MessageConstant.VERIFICATION_CODE + MessageConstant.FORMAT_ERROR)
     @Schema(description = "验证码", example = "123456")
-    private String verificationCode;
+    private String newVerificationCode;
 }

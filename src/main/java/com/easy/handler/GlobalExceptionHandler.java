@@ -53,6 +53,24 @@ public class GlobalExceptionHandler {
         return Result.error(message);
     }
 
+
+
+
+    @ExceptionHandler(org.springframework.web.method.annotation.HandlerMethodValidationException.class)
+    public Result handleHandlerMethodValidationException(
+            org.springframework.web.method.annotation.HandlerMethodValidationException ex) {
+
+        // 从 getAllErrors 中提取错误信息
+        String message = ex.getAllErrors().get(0).getDefaultMessage();
+
+        // 如果提取不到，给个兜底提示
+        if (message == null || message.isEmpty()) {
+            message = "请求参数校验失败，请检查必填参数是否完整";
+        }
+
+        return Result.error(message);
+    }
+
     @ExceptionHandler(ConstraintViolationException.class)
     public Result handleConstraintViolationException(ConstraintViolationException ex){
         String message = ex.getConstraintViolations().iterator().next().getMessage();

@@ -23,10 +23,6 @@ public class UserPageQueryDTO extends PageQueryDTO implements Serializable {
      */
     private String username;
 
-    /**
-     * 用户手机号
-     */
-    private String phone;
 
     /**
      * 用户状态：0-启用，1-禁用

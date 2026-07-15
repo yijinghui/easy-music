@@ -21,6 +21,7 @@ import com.easy.utils.ThreadLocalUtil;
 import com.minio.MinioTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,6 +59,7 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
     }
 
     @Override
+    @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
     public void create(PlaylistDTO playlistDTO) {
         Playlist playlist = new Playlist();
         playlist.setUserId(ThreadLocalUtil.getUserId());
@@ -189,6 +191,8 @@ public class PlaylistServiceImpl extends ServiceImpl<PlaylistMapper, Playlist> i
         // 删除歌单-歌曲关联
         playlistSongMapper.delete(new LambdaQueryWrapper<PlaylistSong>()
                 .eq(PlaylistSong::getPlaylistId, playlistId));
+        // 删除歌单封面图片
+        minioTemplate.deleteFile(playlist.getCoverUrl());
 
     }
 

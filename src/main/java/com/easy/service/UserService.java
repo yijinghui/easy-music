@@ -7,7 +7,9 @@ import com.easy.pojo.vo.UserVO;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -32,7 +34,7 @@ public interface UserService extends IService<User> {
     void updateUserInfo(@Valid UserDTO userDTO);
 
 
-    void updateUserEmail(@Valid UserEmailUpdateDTO updateDTO);
+    void updateUserEmail(String oldCode, String newEmail, String newCode);
 
     void updateUserPassword(UserResetPasswordDTO updateDTO);
 
@@ -44,4 +46,8 @@ public interface UserService extends IService<User> {
     void deleteAccount(String token);
 
     PageResult search(@NotBlank(message = "搜索内容不能为空") String username, @Valid PageQueryDTO pageQueryDTO);
+
+    void updateUsername(@NotBlank(message = "验证码不能为空") String code, @NotBlank(message = "用户名不能为空") String newUsername);
+
+    void checkEmail(@NotBlank(message = "验证码不能为空") String verificationCode);
 }

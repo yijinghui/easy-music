@@ -59,8 +59,8 @@ public class UserController {
     @Operation(summary = "发送验证码接口")
     public Result sendVerificationCode(
             @PathVariable @Email(message = "邮箱格式错误") String email,
-            @PathVariable @Min(value = 1, message = "验证码类型必须在1-4之间")
-            @Max(value = 4, message = "验证码类型必须在1-4之间") Integer optionType) {
+            @PathVariable @Min(value = 1, message = "验证码类型必须在1-6之间")
+            @Max(value = 6, message = "验证码类型必须在1-6之间") Integer optionType) {
         userService.sendVerificationCode(email,optionType);
         return Result.success("验证码发送成功");
     }
@@ -95,6 +95,8 @@ public class UserController {
         return Result.success("更新成功");
     }
 
+
+
     @PutMapping("/password")
     @Operation(summary = "更新用户密码接口")
     public Result updateUserPassword(
@@ -104,11 +106,31 @@ public class UserController {
     }
 
 
-    @PutMapping("/email")
+    @PutMapping("/check/email")
+    @Operation(summary = "检查用户邮箱接口")
+    public Result checkEmail(
+            @RequestParam @NotBlank(message = "验证码不能为空") String verificationCode) {
+        userService.checkEmail(verificationCode);
+        return Result.success("检查成功");
+    }
+
+
+    @PutMapping("/update/email")
     @Operation(summary = "更新用户邮箱接口")
     public Result updateUserEmail(
-            @RequestBody @Valid UserEmailUpdateDTO updateDTO) {
-        userService.updateUserEmail(updateDTO);
+            @RequestParam @NotBlank(message = "验证码不能为空") String oldCode,
+            @RequestParam @Email(message = "邮箱格式错误") String newEmail,
+            @RequestParam @NotBlank(message = "验证码不能为空") String newCode) {
+        userService.updateUserEmail(oldCode,newEmail,newCode);
+        return Result.success("更新成功");
+    }
+
+    @PutMapping("/update/username")
+    @Operation(summary = "更新用户名接口")
+    public Result updateUsername(
+            @RequestParam @NotBlank(message = "验证码不能为空") String code,
+            @RequestParam @NotBlank(message = "用户名不能为空") String newUsername) {
+        userService.updateUsername(code,newUsername);
         return Result.success("更新成功");
     }
     @PatchMapping("/avatar")

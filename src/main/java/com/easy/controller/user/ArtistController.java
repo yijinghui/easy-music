@@ -29,7 +29,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class ArtistController {
 
     private final ArtistService artistService;
-    private final SongService songService;
 
     @Operation(summary = "搜索歌手接口")
     @GetMapping("/search")
@@ -49,15 +48,8 @@ public class ArtistController {
         return Result.success(artistService.page(pageQueryDTO));
     }
 
-    @Operation(summary = "添加歌曲（歌手认证后才能添加）")
-    @PostMapping("/add")
-    public Result add(@RequestBody @Validated(UpdateGroup.class) SongDTO songDTO) {
-        songService.add(songDTO);
-        return Result.success("添加成功");
-    }
 
-
-    @Operation(summary = "歌手认证接口")
+    @Operation(summary = "歌手认证接口（预留接口）")
     @PostMapping("/certify")
     public Result certify(@RequestParam @NotNull(message = "歌手ID不能为空") Long artistId) {
         artistService.certify(artistId);

@@ -3,13 +3,6 @@ package com.easy.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
-import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
-import co.elastic.clients.elasticsearch.core.SearchResponse;
-import co.elastic.clients.elasticsearch.core.search.Hit;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -23,10 +16,10 @@ import com.easy.pojo.entity.*;
 import com.easy.result.PageResult;
 import com.easy.result.Result;
 import com.easy.service.SongService;
-import com.easy.utils.EsClientUtil;
+import com.easy.utils.MSUtil;
 import com.easy.utils.ThreadLocalUtil;
+import com.meilisearch.sdk.Client;
 import com.minio.MinioTemplate;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -34,8 +27,6 @@ import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
-import javax.swing.text.Style;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -57,15 +48,17 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
 
     private final UserMapper userMapper;
 
-
     private final UserFavoriteMapper userFavoriteMapper;
 
     private final StringRedisTemplate stringRedisTemplate;
 
     private final MinioTemplate minIOService;
+
     private final PlayRecordMapper playRecordMapper;
     private final PlaylistMapper playlistMapper;
     private final ArtistMapper artistMapper;
+
+    private final MSUtil msUtil;
 
 
     @Override
@@ -166,18 +159,6 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
         return Result.success("已删除歌曲" + songDB.getSongName());
     }
 
-    @Override
-    public Result deleteSongs(List<Long> songIds) {
-
-        List<Song> songList = baseMapper.selectByIds(songIds);
-        List<String> songNames = songList.stream().map(Song::getSongName).toList();
-        if (baseMapper.delete(new QueryWrapper<Song>().in("song_id", songIds)) == 0) {
-            return Result.error("歌曲不存在");
-        }
-        return Result.success("已删除歌曲" + songNames);
-
-
-    }
 
 
     @Override
@@ -343,97 +324,66 @@ public class SongServiceImpl extends ServiceImpl<SongMapper, Song> implements So
     }
 
     @Override
-    public PageResult search(String text) throws IOException {
-        ElasticsearchClient client = EsClientUtil.getEsClient();
+    public PageResult listSongByArtistId(Long artistId, PageQueryDTO pageQueryDTO) {
+        Long userId = ThreadLocalUtil.getUserId();
+        Page<Song> page = new Page<>(pageQueryDTO.getPageNum(), pageQueryDTO.getPageSize());
+        Page<Song> result = lambdaQuery()
+                .eq(Song::getArtistId, artistId)
+                .orderByDesc(Song::getPlayCount)
+                .page(page);
 
-        // 获取用户收藏歌曲列表
+
+        List<Song> songs = result.getRecords();
+        // 设置用户是否收藏
+        Set<Long> ids = userFavoriteMapper.getUserFavoriteSongIds(userId);
+        songs.forEach(song -> {
+            if(ids.contains(song.getSongId())) {
+                song.setIsFavorite(true);
+            }
+        });
+        return new PageResult(result.getTotal(), songs);
+    }
+
+    @Override
+    public PageResult search(String text) throws IOException {
+
+        List<Object> result = msUtil.search("music", text, Arrays.asList("songName", "artistName", "album", "style", "lyricsSegment"));
+
+        // 转化为Song对象
+        List<Song> songs = result.stream()
+                .map(obj -> {
+                    // 先将对象转为标准 JSON
+                    String jsonStr = JSONUtil.toJsonStr(obj);
+                    return JSONUtil.toBean(jsonStr, Song.class);
+                })
+                .toList();
+
+        // 查询歌曲的完整数据
+        if (songs.isEmpty()) {
+            return new PageResult(0L, new ArrayList<>());
+        }
+
+        List<Song> fullSongs = baseMapper.getByIds(songs.stream().map(Song::getSongId).toList());
+
+        // 用户是否收藏
         Long userId = ThreadLocalUtil.getUserId();
         Set<Long> ids = userFavoriteMapper.getUserFavoriteSongIds(userId);
 
-        SearchResponse<Song> response = client.search(s -> s
-                        .index("music")
-                        .query(q -> q
-                                .multiMatch(m -> m
-                                        .fields("songName", "style", "artistName", "album", "lyrics")
-                                        .query(text)
-                                        .type(TextQueryType.Phrase)
-                                )
-                        )
-                        .highlight(h -> h
-                                .fields("songName", f -> f
-                                        .preTags("<em>")
-                                        .postTags("</em>")
-                                )
-                                .fields("artistName", f -> f
-                                        .preTags("<em>")
-                                        .postTags("</em>")
-                                )
-                                .fields("album", f -> f
-                                        .preTags("<em>")
-                                        .postTags("</em>")
-                                )
-                                .fields("lyrics", f -> f
-                                        .preTags("<em>")
-                                        .postTags("</em>")
-                                        .numberOfFragments(1)
-                                        .fragmentSize(20)
-                                )
-                                .fields("style", f -> f
-                                        .preTags("<em>")
-                                        .postTags("</em>")
-                                )
-                        )
-                        .size(10),  // 返回前10条
-                Song.class
-        );
-
-        List<Song> result=new ArrayList<>();
-        long total=0L;
-
-        // 高亮处理
-        if (response != null) {
-            total = response.hits().total().value();
-            log.info("共查询到{}条记录", total);
-
-            List<Hit<Song>> hits = response.hits().hits();
-            for (Hit<Song> hit : hits) {
-                Map<String, List<String>> highlight = hit.highlight();
-
-
-                Song source = hit.source();
-
-
-                // 覆盖非高亮结果
-                if (highlight.containsKey("artistName")) {
-                    source.setArtistName(highlight.get("artistName").get(0));
-                }
-                if (highlight.containsKey("album")) {
-                    source.setAlbum(highlight.get("album").get(0));
-                }
-                if (highlight.containsKey("lyrics")) {
-                    source.setLyricsSegment(highlight.get("lyrics").get(0));
-                }
-                if (highlight.containsKey("songName")) {
-                    source.setSongName(highlight.get("songName").get(0));
-                }
-                if (highlight.containsKey("style")) {
-                    source.setStyle(highlight.get("style").get(0));
-                }
-
-                if(ids.contains(source.getSongId())) {
-                    source.setIsFavorite(true);
-                }
-                // 获取歌曲播放次数
-                Object o = stringRedisTemplate.opsForHash().get("favorite:song:", source.getSongId().toString());
-                source.setFavoriteCount(o==null?0L:(Long) o);
-
-
-                log.info("处理后的文本：{}", source.toString());
-                result.add(source);
-
+        // 合并完整数据
+        for (int i = 0; i < fullSongs.size(); i++) {
+            fullSongs.get(i).setSongName(songs.get(i).getSongName());
+            fullSongs.get(i).setArtistName(songs.get(i).getArtistName());
+            fullSongs.get(i).setAlbum(songs.get(i).getAlbum());
+            fullSongs.get(i).setStyle(songs.get(i).getStyle());
+            fullSongs.get(i).setLyricsSegment(songs.get(i).getLyricsSegment());
+            if (ids.contains(fullSongs.get(i).getSongId())) {
+                fullSongs.get(i).setIsFavorite(true);
             }
-        }
-        return new PageResult(total,result);
+            log.info("song: {}", fullSongs.get(i));
+        };
+
+        return new PageResult((long) fullSongs.size(), fullSongs);
+
     }
 
     @Override

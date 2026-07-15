@@ -24,10 +24,6 @@ public class UserAdminVO implements Serializable {
      */
     private String username;
 
-    /**
-     * 用户手机号
-     */
-    private String phone;
 
     /**
      * 用户邮箱

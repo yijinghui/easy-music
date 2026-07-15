@@ -29,12 +29,6 @@ public class UserDTO implements Serializable {
     @Pattern(regexp = "^[a-zA-Z0-9_-]{4,16}$", message = MessageConstant.USERNAME + MessageConstant.FORMAT_ERROR)
     private String username;
 
-    /**
-     * 用户手机号
-     * 手机号格式：1开头，11位数字
-     */
-    @Pattern(regexp = "^1[3456789]\\d{9}$", message = MessageConstant.PHONE + MessageConstant.FORMAT_ERROR)
-    private String phone;
 
     /**
      * 用户邮箱

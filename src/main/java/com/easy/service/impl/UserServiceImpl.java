@@ -2,6 +2,7 @@ package com.easy.service.impl;
 
 
 import cn.hutool.core.bean.BeanUtil;
+import com.easy.annotation.LogOperation;
 import com.easy.enumeration.RoleEnum;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -13,10 +14,12 @@ import com.easy.constant.JwtClaimsConstant;
 import com.easy.constant.MessageConstant;
 import com.easy.exception.AccessDeniedException;
 import com.easy.exception.BaseException;
+import com.easy.mapper.PlayRecordMapper;
+import com.easy.mapper.PlaylistMapper;
+import com.easy.mapper.UserFavoriteMapper;
 import com.easy.mapper.UserMapper;
 import com.easy.pojo.dto.*;
-import com.easy.pojo.entity.Artist;
-import com.easy.pojo.entity.User;
+import com.easy.pojo.entity.*;
 import com.easy.pojo.vo.PlaylistInfoVO;
 import com.easy.pojo.vo.UserAdminVO;
 import com.easy.pojo.vo.UserStatVO;
@@ -33,6 +36,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
@@ -56,21 +60,21 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private final EmailService emailService;
 
     private final StatisticService statService;
-
-    private final PlaylistService playlistService;
+    private final UserFavoriteMapper userFavoriteMapper;
+    private final PlaylistMapper playlistMapper;
+    private final PlayRecordMapper playRecordMapper;
+    private final ThreadPoolTaskExecutor smsExecutor;
 
 
     @Override
     public PageResult list(UserPageQueryDTO userPageQueryDTO) {
         Page<User> page = new Page<>(userPageQueryDTO.getPageNum(), userPageQueryDTO.getPageSize());
-        Long userId =userPageQueryDTO.getUserId();
+        Long userId = userPageQueryDTO.getUserId();
         String username = userPageQueryDTO.getUsername();
-        String phone = userPageQueryDTO.getPhone();
         Integer userStatus = userPageQueryDTO.getUserStatus();
 
         Page<User> result = lambdaQuery().eq(userId != null, User::getUserId, userId)
                 .like(StrUtil.isNotBlank(username), User::getUsername, username)
-                .like(StrUtil.isNotBlank(phone), User::getPhone, phone)
                 .eq(userStatus != null, User::getUserStatus, userStatus)
                 .orderByDesc(User::getUserId)
                 .page(page);
@@ -84,21 +88,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("username", userDTO.getUsername())
                 .or()
-                .eq("phone", userDTO.getPhone())
-                .or()
                 .eq("email", userDTO.getEmail());
         // 2.查询用户信息
         List<User> userList = baseMapper.selectList(queryWrapper);
         // 3.判断用户信息是否已存在
-        if (!userList.isEmpty()){
-            for (User user : userList){
-                if (user.getUsername().equals(userDTO.getUsername())){
+        if (!userList.isEmpty()) {
+            for (User user : userList) {
+                if (user.getUsername().equals(userDTO.getUsername())) {
                     return Result.error("用户名已存在");
                 }
-                if (user.getPhone().equals(userDTO.getPhone())){
-                    return Result.error("手机号已存在");
-                }
-                if (user.getEmail().equals(userDTO.getEmail())){
+                if (user.getEmail().equals(userDTO.getEmail())) {
                     return Result.error("邮箱已存在");
                 }
             }
@@ -111,11 +110,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         newUser.setUserStatus(1);
         int result = baseMapper.insert(newUser);
 
-        if (result == 0){
+        if (result == 0) {
             return Result.error("用户添加失败");
         }
         // 5.返回结果
-        return Result.success("已添加用户"+userDTO.getUsername());
+        return Result.success("已添加用户" + userDTO.getUsername());
     }
 
 
@@ -126,21 +125,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         updateById(user);
     }
 
-    @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
-    public Result deleteUser(Long userId) {
-        if(userId== null) return Result.error("用户ID不能为空");
-
-        User user = baseMapper.selectById(userId);
-        if (user == null) return Result.error("用户不存在");
-
-        // 删除用户头像
-        String avatar = user.getUserAvatar();
-        if (StrUtil.isNotBlank(avatar)) {
-            minioTemplate.deleteFile(avatar);
-        }
-
-        return Result.success(baseMapper.deleteById(userId) == 1 ? "已删除用户"+user.getUsername() : "用户删除失败");
-    }
 
     @Transactional(rollbackFor = Exception.class)
     public Result deleteUsers(List<Long> userIds) {
@@ -149,7 +133,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         List<String> userNames = userList.stream().map(User::getUsername).toList();
         List<Long> userIdList = userList.stream().map(User::getUserId).toList();
 
-        if(userList.isEmpty()){
+        if (userList.isEmpty()) {
             return Result.success("未找到相关数据");
         }
 
@@ -165,7 +149,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
 
 
-        return Result.success("已删除用户"+userNames);
+        return Result.success("已删除用户" + userNames);
     }
 
     @Override
@@ -175,7 +159,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (user == null) {
             throw new AccessDeniedException("账号不存在");
         }
-        if (user.getUserStatus() == 0){
+        if (user.getUserStatus() == 0) {
             throw new AccessDeniedException("账号已被冻结");
         }
 
@@ -187,7 +171,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         claims.put(JwtClaimsConstant.USERNAME, user.getUsername());
         String token = JwtUtil.generateToken(claims);
         // 4.2.将token存入Redis
-        stringRedisTemplate.opsForValue().set("login:"+RoleEnum.USER.getRole()+":" + userId, token, 3, TimeUnit.HOURS);
+        stringRedisTemplate.opsForValue().set("login:" + RoleEnum.USER.getRole() + ":" + userId, token, 3, TimeUnit.HOURS);
 
         // 5.返回结果
         return token;
@@ -201,15 +185,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         User user = getOne(new QueryWrapper<User>().eq("email", email));
 
-        if (user.getUserStatus() == 0){
+        if (user.getUserStatus() == 0) {
             throw new AccessDeniedException("账号已被冻结");
         }
 
-        String code=stringRedisTemplate.opsForValue().get("verificationCode:login:" + email);
-        if(code==null){
+        String code = stringRedisTemplate.opsForValue().get("verificationCode:login:" + email);
+        if (code == null) {
             throw new AccessDeniedException("验证码已过期");
         }
-        if(!code.equals(userLoginDTO.getVerificationCode())){
+        if (!code.equals(userLoginDTO.getVerificationCode())) {
             throw new AccessDeniedException("验证码错误");
         }
 
@@ -221,7 +205,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         claims.put(JwtClaimsConstant.USERNAME, user.getUsername());
         String token = JwtUtil.generateToken(claims);
         // 4.2.将token存入Redis
-        stringRedisTemplate.opsForValue().set("login:"+RoleEnum.USER.getRole()+":" + userId, token, 3, TimeUnit.HOURS);
+        stringRedisTemplate.opsForValue().set("login:" + RoleEnum.USER.getRole() + ":" + userId, token, 3, TimeUnit.HOURS);
 
         // 5.返回结果
         return token;
@@ -236,16 +220,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 1.校验验证码
         String code = stringRedisTemplate.opsForValue().get("verificationCode:register:" + email);
 
-        if(code==null){
+        if (code == null) {
             throw new AccessDeniedException("验证码已过期");
         }
-        if(!code.equals(userRegisterDTO.getVerificationCode())){
+        if (!code.equals(userRegisterDTO.getVerificationCode())) {
             throw new AccessDeniedException("验证码错误");
         }
 
         User user = getOne(new QueryWrapper<User>().eq("email", email));
 
-        if (user != null){
+        if (user != null) {
             throw new AccessDeniedException("邮箱已存在");
         }
 
@@ -261,32 +245,38 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
-    public void sendVerificationCode(String email,Integer operationType) {
-
-        String verificationCode = emailService.sendVerificationCodeEmail(email);
-        if (verificationCode == null) {
-            throw new RuntimeException("发送验证码失败");
-        }
-        if (operationType == 1){
-            stringRedisTemplate.opsForValue().set("verificationCode:register:" + email, verificationCode, 5, TimeUnit.MINUTES);
-        }
-        if (operationType == 2){
-            stringRedisTemplate.opsForValue().set("verificationCode:login:" + email, verificationCode, 5, TimeUnit.MINUTES);
-        }
-        if (operationType == 3){
-            stringRedisTemplate.opsForValue().set("verificationCode:updateEmail:" + email, verificationCode, 5, TimeUnit.MINUTES);
-        }
-        if (operationType == 4){
-            stringRedisTemplate.opsForValue().set("verificationCode:updatePassword:" + email, verificationCode, 5, TimeUnit.MINUTES);
-        }
-
+    public void sendVerificationCode(String email, Integer operationType) {
+        smsExecutor.execute(() -> {
+            String verificationCode = emailService.sendVerificationCodeEmail(email);
+            if (verificationCode == null) {
+                throw new RuntimeException("发送验证码失败");
+            }
+            if (operationType == 1) {
+                stringRedisTemplate.opsForValue().set("verificationCode:register:" + email, verificationCode, 5, TimeUnit.MINUTES);
+            }
+            if (operationType == 2) {
+                stringRedisTemplate.opsForValue().set("verificationCode:login:" + email, verificationCode, 5, TimeUnit.MINUTES);
+            }
+            if (operationType == 3) {
+                stringRedisTemplate.opsForValue().set("verificationCode:updateEmail:" + email, verificationCode, 5, TimeUnit.MINUTES);
+            }
+            if (operationType == 4) {
+                stringRedisTemplate.opsForValue().set("verificationCode:updatePassword:" + email, verificationCode, 5, TimeUnit.MINUTES);
+            }
+            if (operationType == 5) {
+                stringRedisTemplate.opsForValue().set("verificationCode:checkEmail:" + email, verificationCode, 5, TimeUnit.MINUTES);
+            }
+            if (operationType == 6) {
+                stringRedisTemplate.opsForValue().set("verificationCode:updateUsername:" + email, verificationCode, 5, TimeUnit.MINUTES);
+            }
+        });
     }
 
     @Override
     public void logout() {
         Long userId = ThreadLocalUtil.getUserId();
-        Boolean delete = stringRedisTemplate.delete("login:"+RoleEnum.USER.getRole()+":" + userId);
-        if (!delete){
+        Boolean delete = stringRedisTemplate.delete("login:" + RoleEnum.USER.getRole() + ":" + userId);
+        if (!delete) {
             throw new RuntimeException("用户未登录");
         }
     }
@@ -296,7 +286,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             key = "'userInfo:' + (#userId != null ? #userId : T(com.easy.utils.ThreadLocalUtil).getUserId())")
     public UserVO userInfo(Long userId) {
 
-        if (userId == null){
+        if (userId == null) {
             userId = ThreadLocalUtil.getUserId();
         }
 
@@ -304,7 +294,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         UserVO userVO = new UserVO();
 
         BeanUtils.copyProperties(user, userVO);
-        if (userId == null){
+        if (userId == null) {
             userVO.setEmail(null);
         }
 
@@ -320,25 +310,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
     public void updateUserInfo(UserDTO userDTO) {
 
-        Long userId =ThreadLocalUtil.getUserId();
+        Long userId = ThreadLocalUtil.getUserId();
 
         userDTO.setUserId(userId);
 
         User user = getById(userId);
-
-        String username = userDTO.getUsername();
-        String phone = userDTO.getPhone();
-
-        if (baseMapper.selectCount(new QueryWrapper<User>().eq("username",username))>0&&!user.getUsername().equals(username)){
-            throw new BaseException("用户名已存在");
-        }
-
-        if (baseMapper.selectCount(new QueryWrapper<User>().eq("phone",phone))>0&&!user.getPhone().equals(phone)){
-            throw new BaseException("手机号已存在");
-        }
-
-        BeanUtil.copyProperties(userDTO, user);
-
+        user.setIntroduction(userDTO.getIntroduction());
         user.setUpdateTime(LocalDateTime.now());
         updateById(user);
     }
@@ -349,10 +326,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         String code = stringRedisTemplate.opsForValue().get("verificationCode:updatePassword:" + userResetPasswordDTO.getEmail());
 
 
-        if(code==null){
+        if (code == null) {
             throw new AccessDeniedException("验证码已过期");
         }
-        if(!code.equals(userResetPasswordDTO.getVerificationCode())){
+        if (!code.equals(userResetPasswordDTO.getVerificationCode())) {
             throw new AccessDeniedException("验证码错误");
         }
 
@@ -362,7 +339,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         Long userId = user.getUserId();
         String newPassword = userResetPasswordDTO.getNewPassword();
         String repeatPassword = userResetPasswordDTO.getRepeatPassword();
-        if (!newPassword.equals(repeatPassword)){
+        if (!newPassword.equals(repeatPassword)) {
             throw new AccessDeniedException("两次密码不一致");
         }
 
@@ -376,30 +353,29 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
 
     @Override
-    public void updateUserEmail(UserEmailUpdateDTO updateDTO) {
+    @LogOperation
+    @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
+    public void updateUserEmail(String oldCode, String newEmail, String newCode) {
+
         Long userId = ThreadLocalUtil.getUserId();
+        User user = getById(userId);
+        String oldEmail = user.getEmail();
 
-        String newEmail = updateDTO.getNewEmail();
-
-        if (baseMapper.selectCount(new QueryWrapper<User>().eq("email",newEmail))>0){
-            throw new BaseException("邮箱已存在");
+        if (newEmail.equals(user.getEmail())) {
+            throw new AccessDeniedException("新邮箱不能与旧邮箱相同");
         }
 
         // Redis中查询验证码是否合法
-        String code = stringRedisTemplate.opsForValue().get("verificationCode:updateEmail:" + newEmail);
-
-        if(code==null){
-            throw new AccessDeniedException("验证码已过期");
-        }
-        if(!code.equals(updateDTO.getVerificationCode())){
-            throw new AccessDeniedException("验证码错误");
+        String code = stringRedisTemplate.opsForValue().get("verificationCode:checkEmail:" + oldEmail);
+        if (code == null || !code.equals(oldCode)) {
+            throw new AccessDeniedException("身份验证失败，请返回上一步重新进行操作");
         }
 
-        User user = getById(userId);
-
-        if (newEmail.equals(user.getEmail())){
-            throw new AccessDeniedException("新邮箱不能与旧邮箱相同");
+        if (baseMapper.selectCount(new QueryWrapper<User>().eq("email", newEmail)) > 0) {
+            throw new BaseException("邮箱已存在");
         }
+
+        stringRedisTemplate.opsForValue().get("verificationCode:updateEmail:" + newEmail);
 
         user.setEmail(newEmail);
         user.setUpdateTime(LocalDateTime.now());
@@ -411,7 +387,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
     public void updateAvatar(Long userId, MultipartFile avatar) {
-        if (userId==null){
+        if (userId == null) {
             userId = ThreadLocalUtil.getUserId();
         }
         String avatarUrl = minioTemplate.uploadFile(avatar, "users");
@@ -437,6 +413,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         removeById(userId);
 
+        // 删除用户所有歌单
+        playlistMapper.delete(new QueryWrapper<Playlist>().eq("user_id", userId));
+
+        // 删除用户所有收藏
+        userFavoriteMapper.delete(new QueryWrapper<UserFavorite>().eq("user_id", userId));
+
+        // 删除用户所有播放记录
+        playRecordMapper.delete(new QueryWrapper<PlayRecord>().eq("user_id", userId));
+
+
     }
 
     @Override
@@ -452,6 +438,51 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             voList.add(userVO);
         }
         return new PageResult(result.getTotal(), voList);
+    }
+
+    @Override
+    @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
+    public void updateUsername(String code, String newUsername) {
+        Long userId = ThreadLocalUtil.getUserId();
+
+        User user = getById(userId);
+
+        if (newUsername.equals(user.getUsername())) {
+            throw new AccessDeniedException("新用户名不能与旧用户名相同");
+        }
+
+        if (baseMapper.selectCount(new QueryWrapper<User>().eq("username", newUsername)) > 0) {
+            throw new BaseException("用户名已存在");
+        }
+
+        // Redis中查询验证码是否合法
+        String codeFromRedis = stringRedisTemplate.opsForValue().get("verificationCode:updateUsername:" + user.getEmail());
+
+        if (codeFromRedis == null) {
+            throw new AccessDeniedException("验证码已过期");
+        }
+        if (!codeFromRedis.equals(code)) {
+            throw new AccessDeniedException("验证码错误");
+        }
+
+        user.setUsername(newUsername);
+        user.setUpdateTime(LocalDateTime.now());
+        updateById(user);
+    }
+
+    @Override
+    public void checkEmail(String verificationCode) {
+        Long userId = ThreadLocalUtil.getUserId();
+        User user = getById(userId);
+
+        String code = stringRedisTemplate.opsForValue().get("verificationCode:checkEmail:" + user.getEmail());
+        if (code == null) {
+            throw new AccessDeniedException("验证码已过期");
+        }
+        if (!code.equals(verificationCode)) {
+            throw new AccessDeniedException("验证码错误，身份校验未通过");
+        }
+        stringRedisTemplate.expire("verificationCode:checkEmail:" + user.getEmail(), 30, TimeUnit.MINUTES);
     }
 
 }

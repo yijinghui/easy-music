@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.easy.mapper.PlayRecordMapper;
 import com.easy.mapper.SongMapper;
+import com.easy.mapper.UserFavoriteMapper;
 import com.easy.pojo.dto.PageQueryDTO;
 import com.easy.pojo.entity.PlayRecord;
 import com.easy.pojo.entity.Song;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 
 
 @Service
@@ -22,6 +24,7 @@ import java.util.List;
 public class PlayRecordServiceImpl extends ServiceImpl<PlayRecordMapper, PlayRecord> implements PlayRecordService {
 
     private final SongMapper songMapper;
+    private final UserFavoriteMapper userFavoriteMapper;
 
     @Override
     public List<Song> listByUserId() {
@@ -32,8 +35,17 @@ public class PlayRecordServiceImpl extends ServiceImpl<PlayRecordMapper, PlayRec
             return List.of();
         }
 
+        List<Song> songs = songMapper.getByIds(ids);
+        // 设置用户是否收藏
+        Set<Long> favoriteSongIds = userFavoriteMapper.getUserFavoriteSongIds(userId);
+        songs.forEach(song -> {
+            if(favoriteSongIds.contains(song.getSongId())) {
+                song.setIsFavorite(true);
+            }
+        });
+
         // 2. 从歌曲表中查询歌曲信息
-        return songMapper.getByIds(ids);
+        return songs;
 
     }
 

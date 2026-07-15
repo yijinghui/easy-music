@@ -21,6 +21,7 @@ import com.easy.result.Result;
 import com.easy.service.UserFavoriteService;
 import com.easy.utils.ThreadLocalUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,6 +66,7 @@ public class UserFavoriteServiceImpl extends ServiceImpl<UserFavoriteMapper, Use
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
     public void collectSong(Long songId) {
         Long userId = ThreadLocalUtil.getUserId();
 
@@ -91,6 +93,7 @@ public class UserFavoriteServiceImpl extends ServiceImpl<UserFavoriteMapper, Use
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
     public void cancelCollectSong(Long songId) {
         Long userId = ThreadLocalUtil.getUserId();
 
@@ -123,6 +126,7 @@ public class UserFavoriteServiceImpl extends ServiceImpl<UserFavoriteMapper, Use
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
     public void collectPlaylist(Long playlistId) {
         Long userId = ThreadLocalUtil.getUserId();
 
@@ -143,6 +147,7 @@ public class UserFavoriteServiceImpl extends ServiceImpl<UserFavoriteMapper, Use
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = "userCache", key = "'userInfo:' + T(com.easy.utils.ThreadLocalUtil).getUserId()")
     public void cancelCollectPlaylist(Long playlistId) {
         Long userId = ThreadLocalUtil.getUserId();
 

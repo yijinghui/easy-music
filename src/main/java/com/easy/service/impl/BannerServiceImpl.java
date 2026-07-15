@@ -16,6 +16,7 @@ import com.easy.result.Result;
 import com.easy.service.BannerService;
 import com.minio.MinioTemplate;
 import lombok.RequiredArgsConstructor;
+import org.checkerframework.checker.units.qual.C;
 import org.springframework.beans.BeanUtils;
 
 import org.springframework.cache.annotation.CacheEvict;
@@ -115,6 +116,7 @@ public class BannerServiceImpl extends ServiceImpl<BannerMapper, Banner> impleme
     }
 
     @Override
+    @Cacheable(cacheNames = "bannerList:active")
     public List<Banner> listActiveBanners() {
         return list(new QueryWrapper<Banner>()
                 .eq("status", 1)

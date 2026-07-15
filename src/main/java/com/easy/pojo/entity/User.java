@@ -65,13 +65,6 @@ public class User implements Serializable {
     @TableField("password")
     private String password;
 
-    /**
-     * 用户手机号
-     * 手机号格式：1开头，11位数字
-     */
-    @Pattern(regexp = "^1[3456789]\\d{9}$", message = MessageConstant.PHONE + MessageConstant.FORMAT_ERROR)
-    @TableField("phone")
-    private String phone;
 
     /**
      * 用户邮箱
